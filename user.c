@@ -1,25 +1,24 @@
 
+#include "board.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include "board.h"
 #include <string.h>
 
 #define STACK 0
 
 void safe_gets(char *, int);
 
-user_input(board,colour)
-BOARD board;
+user_input(board, colour) BOARD board;
 {
   char s[80];
-  int p,ux,uy,x,y,i,l;
-
+  int p, ux, uy, x, y, i, l;
 
 again:
-  new(STACK);
-  while (pop(&x,&y,STACK)) ;
+  new (STACK);
+  while (pop(&x, &y, STACK))
+    ;
 
-  valid(board,colour,STACK);
+  valid(board, colour, STACK);
 
   printf("Please enter a move --> ");
   fflush(stdout);
@@ -29,7 +28,7 @@ again:
   uy = ux = -1;
   p = 0;
 
-  for (i=0;i<l;i++) {
+  for (i = 0; i < l; i++) {
     if (s[i] == '?') {
       printf("\n");
       printf("?\t\t\t\t:display this help page\n");
@@ -42,10 +41,14 @@ again:
       fflush(stdout);
       goto again;
     }
-    if (s[i] >= 'a' && s[i] <= 'h') ux=s[i]-'a';
-    if (s[i] >= '1' && s[i] <= '8') uy='8'-s[i];
-    if (s[i] == 'p') p=1;
-    if (s[i] == 'q') exit(0);
+    if (s[i] >= 'a' && s[i] <= 'h')
+      ux = s[i] - 'a';
+    if (s[i] >= '1' && s[i] <= '8')
+      uy = '8' - s[i];
+    if (s[i] == 'p')
+      p = 1;
+    if (s[i] == 'q')
+      exit(0);
     if (s[i] == 'r') {
       display(board);
       display_score(board);
@@ -58,14 +61,14 @@ again:
         exit(0);
   }
 
-  if ((ux==-1 || uy==-1) && p==0) {
+  if ((ux == -1 || uy == -1) && p == 0) {
     printf("?syntax error\n");
     fflush(stdout);
     goto again;
   }
 
-  if (p==1) {
-    if (pop(&x,&y,STACK)) {
+  if (p == 1) {
+    if (pop(&x, &y, STACK)) {
       printf("You can't pass unless you have no moves\n");
       fflush(stdout);
       goto again;
@@ -73,19 +76,19 @@ again:
     consecutive_passes++;
     printf("Pass accepted.\n");
     fflush(stdout);
-    return(0);
+    return (0);
   }
 
-  while (pop(&x,&y,STACK)) {
-    if (x==ux && y==uy) {
-      printf("Move to %c%c accepted.\n",x+'a','8'-y);
+  while (pop(&x, &y, STACK)) {
+    if (x == ux && y == uy) {
+      printf("Move to %c%c accepted.\n", x + 'a', '8' - y);
       fflush(stdout);
-      move(board,colour,x,y);
+      move(board, colour, x, y);
       consecutive_passes = 0;
-      return(0);
+      return (0);
     }
   }
-  printf("You can't move to %c%c.\n",ux+'a','8'-uy);
+  printf("You can't move to %c%c.\n", ux + 'a', '8' - uy);
   fflush(stdout);
   goto again;
 }

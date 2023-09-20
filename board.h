@@ -8,4 +8,3 @@ extern char val[256];
 extern char val2[256];
 extern int turn;
 extern int consecutive_passes;
-

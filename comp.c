@@ -1,24 +1,22 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include "board.h"
 #include "endgame.h"
+#include <stdio.h>
+#include <stdlib.h>
 
-computer_input(board,colour)
-BOARD board;
+computer_input(board, colour) BOARD board;
 {
-  int x,y,sc;
+  int x, y, sc;
 
-  sc = search(board,colour,&x,&y);
-  if (x==-1) {
-    printf("%c has to pass.\n",colour?'W':'B');
+  sc = search(board, colour, &x, &y);
+  if (x == -1) {
+    printf("%c has to pass.\n", colour ? 'W' : 'B');
     fflush(stdout);
     consecutive_passes++;
-  }
-  else {
-    printf("best move for %c is at %c%c (score %d)\n",
-      colour?'W':'B',x+'a','8'-y, sc - ((turn>ENDGAME)?0:(8187)));
+  } else {
+    printf("best move for %c is at %c%c (score %d)\n", colour ? 'W' : 'B',
+           x + 'a', '8' - y, sc - ((turn > ENDGAME) ? 0 : (8187)));
     fflush(stdout);
-    move(board,colour,x,y);
-    consecutive_passes=0;
+    move(board, colour, x, y);
+    consecutive_passes = 0;
   }
 }
