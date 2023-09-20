@@ -3,7 +3,6 @@
 #include "board.h"
 
 char a[] = "-BW?";
-extern unsigned char val[256];
 extern int turn;
 
 
@@ -15,41 +14,41 @@ extern int turn;
 display(board)
 BOARD board;
 {
-	register x,y;
+  register x,y;
 
-	for (y=0;y<8;y++) {
-		printf("\t\t\t\t%c ",'8'-y);
-		for (x=0;x<8;x++) { putchar(a[TYPE(board,x,y)]); putchar(' ');}
-		putchar('\n');
-	}
-	printf("\t\t\t\t  ");
-	for (x=0;x<8;x++) { putchar('a'+x); putchar(' '); }
-	putchar('\n');
-	fflush(stdout);
+  for (y=0;y<8;y++) {
+    printf("\t\t\t\t%c ",'8'-y);
+    for (x=0;x<8;x++) { putchar(a[TYPE(board,x,y)]); putchar(' ');}
+    putchar('\n');
+  }
+  printf("\t\t\t\t  ");
+  for (x=0;x<8;x++) { putchar('a'+x); putchar(' '); }
+  putchar('\n');
+  fflush(stdout);
 }
 
 rdisp(edge)
 {
-	int x;
+  int x;
 
-	for (x=0;x<8;x++)
-		putchar(a[RTYPE(edge,x)]);
+  for (x=0;x<8;x++)
+    putchar(a[RTYPE(edge,x)]);
     fflush(stdout);
 }
 
 display_score(board)
 BOARD board;
 {
-	int sc1,sc2,i;
+  int sc1,sc2,i;
 
-	sc1 = 0;
-	for (i=0;i<8;i++)
-		sc1+=val[board[1][i]];
-	printf("\t\t\t\t\t\t    Score: W=%d ",sc1);
-	sc2 = 0;
-	for (i=0;i<8;i++)
-		sc2+=val[board[0][i]];
-	printf("B=%d\n",sc2);
-	turn = sc1+sc2;
-	fflush(stdout);
+  sc1 = 0;
+  for (i=0;i<8;i++)
+    sc1+=val[board[1][i]];
+  printf("\t\t\t\t\t\t    Score: W=%d ",sc1);
+  sc2 = 0;
+  for (i=0;i<8;i++)
+    sc2+=val[board[0][i]];
+  printf("B=%d\n",sc2);
+  turn = sc1+sc2;
+  fflush(stdout);
 }

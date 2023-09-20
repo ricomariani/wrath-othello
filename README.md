@@ -10,3 +10,10 @@ What can I say, it could be worse.
 I had to make a few very minor changes to reduce warnings from ridiculous to just awful.
 
 BTW: This program did not win, or even place, but it's never been beaten by a human since about 6 hours or so into its development which I guess tells you something about how hard Othello is.  Also it ran *much* slower on some slice of a VAX 780.  These days it's ridiculously fast but then I was lucky to evaluate 500 boards/sec.
+
+The closed to the original source code is in the original subdirectory.
+
+The root directory I'm going to modernize and comment.  And also the naming convention you use when your identifiers
+are capped at 8 letters kind of sucks.  So I'll rename a bunch of things too.  As it is there were conflicts and
+whatnot.
+

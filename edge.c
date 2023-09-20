@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include <stdlib.h>  
+#include <stdlib.h>
 #include <malloc.h>
 
 unsigned short *edge;
@@ -9,97 +9,97 @@ extern unsigned short *packt;
 
 buildedge()
 {
-	unsigned long i;
+  unsigned long i;
 
-	for (i=0;i<8;i++)  {
-	    flipt[i] = (unsigned short *)malloc(6561*sizeof(short));
-	    if (!flipt[i]) {
-	    	printf("Error, can't allocate enough memory for flip table\n");
-	    	fflush(stdout);
-	    	exit(1000);
-	    }
-	}
+  for (i=0;i<8;i++)  {
+      flipt[i] = (unsigned short *)malloc(6561*sizeof(short));
+      if (!flipt[i]) {
+        printf("Error, can't allocate enough memory for flip table\n");
+        fflush(stdout);
+        exit(1000);
+      }
+  }
 
-	edge = (unsigned short *)calloc(65536,sizeof(short));
-	if (!edge) {
-		printf("Error, can't allocate enough memory for edge table\n");
-		fflush(stdout);
-		exit(1);
-	}
+  edge = (unsigned short *)calloc(65536,sizeof(short));
+  if (!edge) {
+    printf("Error, can't allocate enough memory for edge table\n");
+    fflush(stdout);
+    exit(1);
+  }
 
-	printf("Building edge table\n");
-	fflush(stdout);
+  printf("Building edge table\n");
+  fflush(stdout);
 
-	for (i=0;i<65536;i++) edge[i] = 0;
+  for (i=0;i<65536;i++) edge[i] = 0;
 
-	for (i=0;i<65536;i++) 
-		if (!(i&(i>>8))) be(i);
+  for (i=0;i<65536;i++)
+    if (!(i&(i>>8))) be(i);
 
-	printf("Computation complete\n");
-	fflush(stdout);
+  printf("Computation complete\n");
+  fflush(stdout);
 }
 
 be(index)
 unsigned index;
 {
-	int lo,hi;
-	int i,c,s;
-	unsigned b,t,t2;
+  int lo,hi;
+  int i,c,s;
+  unsigned b,t,t2;
 
-	if (edge[index]) return(edge[index]);
+  if (edge[index]) return(edge[index]);
 
-	hi = index>>8;
-	lo = index&0xff;
+  hi = index>>8;
+  lo = index&0xff;
 
-	if (hi&lo) return(0);
+  if (hi&lo) return(0);
 
-	/* test packing/unpacking ******************************************
-	**
-	if (index != unpack(pack(index))) {
-		printf("Yipe! ");
-		rdisp(index);
-		printf(" != ");
-		rdisp(unpack(pack(index)));
-		printf("\n");
-		fflush(stdout);
-		exit(99);
-	}
-	**
-	*******************************************************************/
+  /* test packing/unpacking ******************************************
+  **
+  if (index != unpack(pack(index))) {
+    printf("Yipe! ");
+    rdisp(index);
+    printf(" != ");
+    rdisp(unpack(pack(index)));
+    printf("\n");
+    fflush(stdout);
+    exit(99);
+  }
+  **
+  *******************************************************************/
 
-	if (lo == ((~hi)&0xff)) {
-		edge[index] = val[hi]<<9;
+  if (lo == ((~hi)&0xff)) {
+    edge[index] = val[hi]<<9;
 
-		for (i=0;i<8;i++)
-			flipt[i][packt[index]] = index;
+    for (i=0;i<8;i++)
+      flipt[i][packt[index]] = index;
 
-		return(edge[index]);
-	}
+    return(edge[index]);
+  }
 
-	b = (lo|hi);
+  b = (lo|hi);
 
-	c = s = 0;
-	for (i=0;i<8;i++) {
-		if (b&(1<<i)) {
-			flipt[i][packt[index]] = index;
-			continue;
-		}
-		c += 2;
+  c = s = 0;
+  for (i=0;i<8;i++) {
+    if (b&(1<<i)) {
+      flipt[i][packt[index]] = index;
+      continue;
+    }
+    c += 2;
 
-		t = index;
-		t = fe(t,0,i,1);
-		t = fe(t,0,i,-1);
+    t = index;
+    t = fe(t,0,i,1);
+    t = fe(t,0,i,-1);
 
-		flipt[i][packt[index]] = t;
+    flipt[i][packt[index]] = t;
 
-		t2 = index;
-		t2 = fe(t2,1,i,1);
-		t2 = fe(t2,1,i,-1);
+    t2 = index;
+    t2 = fe(t2,1,i,1);
+    t2 = fe(t2,1,i,-1);
 
-		s += be(t);
-		s += be(t2);
-	}
+    s += be(t);
+    s += be(t2);
+  }
 
-	edge[index] = s/c;
-	return(edge[index]);
+  edge[index] = s/c;
+  return(edge[index]);
 }
