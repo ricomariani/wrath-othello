@@ -1,7 +1,7 @@
 #include "board.h"
 
 extern unsigned short *(flipt[8]);
-extern unsigned short *packt;
+extern unsigned short *pack_table;
 
 #define stuff(a, b, c)                                                         \
   (((((unsigned long)a) & 0xff) << 16) | ((((unsigned long)b) & 0xff) << 8) |  \
@@ -30,7 +30,7 @@ valid(board, colour, stack) BOARD board;
     for (i = 0; i < 8; i++, d1 <<= 1) {
       if (d0 & d1)
         continue;
-      if ((row | (256 << i)) != flipt[i][packt[row]]) {
+      if ((row | (256 << i)) != flipt[i][pack_table[row]]) {
         push(i, y, stack);
         used |= (1 << i);
         yes++;

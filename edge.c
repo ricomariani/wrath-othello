@@ -5,7 +5,7 @@
 unsigned short *edge;
 unsigned short *(flipt[8]);
 extern unsigned char val[256];
-extern unsigned short *packt;
+extern unsigned short *pack_table;
 
 buildedge() {
   unsigned long i;
@@ -57,11 +57,11 @@ be(index) unsigned index;
 
   /* test packing/unpacking ******************************************
   **
-  if (index != unpack(pack(index))) {
+  if (index != unpack(pack_board_row(index))) {
     printf("Yipe! ");
     rdisp(index);
     printf(" != ");
-    rdisp(unpack(pack(index)));
+    rdisp(unpack(pack_board_row(index)));
     printf("\n");
     fflush(stdout);
     exit(99);
@@ -73,7 +73,7 @@ be(index) unsigned index;
     edge[index] = val[hi] << 9;
 
     for (i = 0; i < 8; i++)
-      flipt[i][packt[index]] = index;
+      flipt[i][pack_table[index]] = index;
 
     return (edge[index]);
   }
@@ -83,7 +83,7 @@ be(index) unsigned index;
   c = s = 0;
   for (i = 0; i < 8; i++) {
     if (b & (1 << i)) {
-      flipt[i][packt[index]] = index;
+      flipt[i][pack_table[index]] = index;
       continue;
     }
     c += 2;
@@ -92,7 +92,7 @@ be(index) unsigned index;
     t = fe(t, 0, i, 1);
     t = fe(t, 0, i, -1);
 
-    flipt[i][packt[index]] = t;
+    flipt[i][pack_table[index]] = t;
 
     t2 = index;
     t2 = fe(t2, 1, i, 1);

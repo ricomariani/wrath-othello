@@ -1,7 +1,7 @@
 #include "board.h"
 
 extern unsigned short *(flipt[8]);
-extern unsigned short *packt;
+extern unsigned short *pack_table;
 
 flip(board, colour, x, y) BOARD board;
 int colour;
@@ -13,23 +13,23 @@ int colour;
   him = &board[!colour][0];
 
   row = gethorz(me, him, y) & (~(256 << x));
-  new = flipt[x][packt[row]];
+  new = flipt[x][pack_table[row]];
   puthorz(me, him, y, new);
 
   row = getvert(me, him, x, y);
-  new = flipt[y][packt[row]];
+  new = flipt[y][pack_table[row]];
   row |= (256 << y);
   if (new != row)
     putvert(me, him, x, new);
 
   row = getdiag1(me, him, x, y);
-  new = flipt[x][packt[row]];
+  new = flipt[x][pack_table[row]];
   row |= (256 << x);
   if (new != row)
     putdiag1(me, him, x, y, new);
 
   row = getdiag2(me, him, x, y);
-  new = flipt[x][packt[row]];
+  new = flipt[x][pack_table[row]];
   row |= (256 << x);
   if (new != row)
     putdiag2(me, him, x, y, new);

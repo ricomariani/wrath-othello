@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-extern char a[];
+extern char ascii_values[];
 extern int colour;
 extern BOARD initial;
 
@@ -42,7 +42,7 @@ int save() {
 
   for (y = 0; y < 8; y++) {
     for (x = 0; x < 8; x++) {
-      putc(a[TYPE(initial, x, y)], f);
+      putc(ascii_values[TYPE(initial, x, y)], f);
       putc(' ', f);
     }
     fputc('\n', f);

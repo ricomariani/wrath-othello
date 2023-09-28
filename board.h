@@ -8,3 +8,7 @@ extern char val[256];
 extern char val2[256];
 extern int turn;
 extern int consecutive_passes;
+
+void display(BOARD board);
+void display_one_row(int row);
+void display_score(BOARD board);

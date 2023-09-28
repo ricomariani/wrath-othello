@@ -60,7 +60,7 @@ main(argc, argv) char **argv;
   printf("Give me about thirty seconds to build up my tables please\n");
   fflush(stdout);
 
-  bpack();
+  build_pack_table();
   for (i = 0; i < 256; i++)
     for (j = 0; j < 8; j++) {
       val[i] += !!(i & (1 << j));
