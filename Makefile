@@ -5,4 +5,4 @@ SOURCE = main.c display.c valid.c stack.c search.c \
 CFLAGS = -O3 -g -Wno-implicit-function-declaration -Wno-implicit-int -Wno-unused-result
 
 all: $(OBJECTS)
-	cc -o wrath $(CFLAGS) $(SOURCE)
+	$(CC) -o wrath $(CFLAGS) $(SOURCE)
