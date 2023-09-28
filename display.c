@@ -17,7 +17,7 @@ extern int turn;
 
 // here rowbits has a single row, black is the low bits and white is t he high bits
 // the values are 0 empty, 1 black and 2 white just like the ascii table above
-#define RTYPE(row, x) (RINDEX((row >> 8), x) + (RINDEX((row)&0xff, x) << 1))
+#define RTYPE(rowbits, x) (RINDEX((rowbits >> 8), x) + (RINDEX((rowbits)&0xff, x) << 1))
 
 
 // draw all the rows of the board

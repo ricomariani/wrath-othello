@@ -12,3 +12,7 @@ extern int consecutive_passes;
 void display(BOARD board);
 void display_one_row(int row);
 void display_score(BOARD board);
+
+void reset_scored_moves(int lvl);
+void insert_scored_move(int x, int y, int score, int lvl);
+int remove_scored_move(int *x, int *y, int lvl);

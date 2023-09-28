@@ -14,8 +14,8 @@ user_input(board, colour) BOARD board;
   int p, ux, uy, x, y, i, l;
 
 again:
-  new (STACK);
-  while (pop(&x, &y, STACK))
+  reset_move_stack (STACK);
+  while (pop_move(&x, &y, STACK))
     ;
 
   valid(board, colour, STACK);
@@ -68,7 +68,7 @@ again:
   }
 
   if (p == 1) {
-    if (pop(&x, &y, STACK)) {
+    if (pop_move(&x, &y, STACK)) {
       printf("You can't pass unless you have no moves\n");
       fflush(stdout);
       goto again;
@@ -79,7 +79,7 @@ again:
     return (0);
   }
 
-  while (pop(&x, &y, STACK)) {
+  while (pop_move(&x, &y, STACK)) {
     if (x == ux && y == uy) {
       printf("Move to %c%c accepted.\n", x + 'a', '8' - y);
       fflush(stdout);

@@ -17,7 +17,7 @@ valid(board, colour, stack) BOARD board;
   int yes;
   unsigned row;
 
-  new (stack);
+  reset_move_stack(stack);
   yes = 0;
 
   me = &board[colour][0];
