@@ -8,7 +8,7 @@
 
 void safe_gets(char *, int);
 
-user_input(board, colour) BOARD board;
+int user_input(BOARD board, int colour)
 {
   char s[80];
   int p, ux, uy, x, y, i, l;
@@ -41,24 +41,31 @@ again:
       fflush(stdout);
       goto again;
     }
-    if (s[i] >= 'a' && s[i] <= 'h')
+    if (s[i] >= 'a' && s[i] <= 'h') {
       ux = s[i] - 'a';
-    if (s[i] >= '1' && s[i] <= '8')
+    }
+    if (s[i] >= '1' && s[i] <= '8') {
       uy = '8' - s[i];
-    if (s[i] == 'p')
+    }
+    if (s[i] == 'p') {
       p = 1;
-    if (s[i] == 'q')
+    }
+    if (s[i] == 'q') {
       exit(0);
+    }
     if (s[i] == 'r') {
       display(board);
       display_score(board);
       goto again;
     }
-    if (s[i] == 's')
-      if (save())
+    if (s[i] == 's') {
+      if (save()) {
         goto again;
-      else
+      }
+      else {
         exit(0);
+      }
+    }
   }
 
   if ((ux == -1 || uy == -1) && p == 0) {

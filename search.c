@@ -10,7 +10,7 @@
 #define GREAT 32000
 
 extern int turn;
-long int boards;
+int boards;
 jmp_buf env;
 int totaltime;
 int starttime;
@@ -22,10 +22,22 @@ int bs;
 static limit;
 int IRQ;
 
+static void bcpy(BOARD b1, BOARD b2);
+
 void timeout() { IRQ = 1; }
 
-search(board, colour, bestx, besty) BOARD board;
-int *bestx, *besty;
+static void print_with_commas(int n) {
+  if (n < 1000) {
+    printf ("%d", n);
+  }
+  else {
+    print_with_commas(n / 1000);
+    printf(",%03d", n % 1000);
+  }
+}
+
+
+int search(BOARD board, int colour, int *bestx, int *besty)
 {
   int i, start, lvl, moves;
 
@@ -60,12 +72,18 @@ int *bestx, *besty;
     thistime = time(0) - starttime;
     if (!thistime)
       thistime = 1;
+
     totaltime += thistime;
-    printf("\nEvaluated %ld boards in %d:%02d (%ld boards/sec). ", boards,
-           thistime / 60, thistime % 60, boards / thistime);
+
+    printf("\nEvaluated ");
+    print_with_commas(boards);
+    printf(" boards in %d:%02d (", thistime / 60, thistime % 60);
+    print_with_commas(boards / thistime);
+    printf(" boards/sec). ");
     printf("Total time used=%d:%02d \n", totaltime / 60, totaltime % 60);
     fflush(stdout);
-    return (bs);
+
+    return bs;
   }
 
   if (!(moves = valid(board, colour, start))) {
@@ -95,7 +113,7 @@ no_moves:
   longjmp(env, 1);
 }
 
-rsearch(board, colour, depth, lvl) BOARD board;
+int rsearch(BOARD board, int colour, int depth, int lvl)
 {
   int x, y, sc;
   BOARD brd;
@@ -140,16 +158,16 @@ rsearch(board, colour, depth, lvl) BOARD board;
   }
   printf("\n");
   fflush(stdout);
-  return (bs);
+  return bs;
 }
 
-mini(board, colour, depth, a, b) BOARD board;
+int mini(BOARD board, int colour, int depth, int a, int b)
 {
   if (IRQ)
     longjmp(env, 1);
   boards++;
   if (!depth)
-    return (score(board, colour));
+    return score(board, colour);
   else {
     BOARD brd;
     int x, y, sc, yes;
@@ -163,7 +181,7 @@ mini(board, colour, depth, a, b) BOARD board;
         sc = maxi(board, !colour, depth + 1, a, b);
       } else
         sc = maxi(board, !colour, depth - 1, a, b);
-      return (sc);
+      return sc;
     }
     searching_to_end = 0;
 
@@ -174,20 +192,20 @@ mini(board, colour, depth, a, b) BOARD board;
       if (sc < b) {
         b = sc;
         if (b <= a)
-          return (b);
+          return b;
       }
     }
-    return (b);
+    return b;
   }
 }
 
-maxi(board, colour, depth, a, b) BOARD board;
+int maxi(BOARD board, int colour, int depth, int a, int b)
 {
   if (IRQ)
     longjmp(env, 1);
   boards++;
   if (!depth)
-    return (score(board, colour));
+    return score(board, colour);
   else {
     BOARD brd;
     int x, y, sc, yes;
@@ -201,7 +219,7 @@ maxi(board, colour, depth, a, b) BOARD board;
         sc = mini(board, !colour, depth + 1, a, b);
       } else
         sc = mini(board, !colour, depth - 1, a, b);
-      return (sc);
+      return sc;
     }
     searching_to_end = 0;
 
@@ -212,28 +230,31 @@ maxi(board, colour, depth, a, b) BOARD board;
       if (sc > a) {
         a = sc;
         if (a >= b)
-          return (a);
+          return a;
       }
     }
-    return (a);
+    return a;
   }
 }
-bcpy(b1, b2) register char *b1, *b2;
+
+static void bcpy(BOARD b1, BOARD b2)
 {
   memcpy(b1, b2, sizeof(BOARD));
 }
 
-move(board, colour, x, y) register BOARD board;
+void move(BOARD board, int colour, int x, int y)
 {
   board[colour][y] |= (1 << x);
   flip(board, colour, x, y);
   display(board);
 }
 
-show(depth, score) {
+void show(int depth, int score) {
   int i;
+
   for (i = 0; i < depth; i++)
     putchar('\t');
+
   printf("%d\n", score);
   fflush(stdout);
 }

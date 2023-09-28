@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-computer_input(board, colour) BOARD board;
+void computer_input(board, colour) BOARD board;
 {
   int x, y, sc;
 

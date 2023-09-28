@@ -4,8 +4,7 @@
 
 extern int colour;
 
-load(f, board) register FILE *f;
-BOARD board;
+void load(FILE *f, BOARD board)
 {
   int i, j, n;
   char c[8];

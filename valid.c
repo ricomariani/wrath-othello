@@ -8,17 +8,17 @@ extern unsigned short *pack_table;
    ((c)&0xff))
 #define unstuff(a) ((((a) >> 16) | ((a) >> 8) | (a)) & 0xff)
 
-valid(board, colour, stack) BOARD board;
+int valid(BOARD board, int colour, int stack)
 {
   unsigned char *me, *him;
   unsigned long y0, y1, d0, d1;
   int i, y;
   unsigned char used;
-  int yes;
+  int found_anything;
   unsigned row;
 
   reset_move_stack(stack);
-  yes = 0;
+  found_anything = 0;
 
   me = &board[colour][0];
   him = &board[!colour][0];
@@ -33,7 +33,7 @@ valid(board, colour, stack) BOARD board;
       if ((row | (256 << i)) != flipt[i][pack_table[row]]) {
         push(i, y, stack);
         used |= (1 << i);
-        yes++;
+        found_anything = 1;
       }
     }
 
@@ -72,10 +72,10 @@ valid(board, colour, stack) BOARD board;
       for (i = 0; i < 8; i++) {
         if (row & (1 << i)) {
           push(i, y, stack);
-          yes++;
+          found_anything = 1;
         }
       }
     }
   }
-  return (yes);
+  return found_anything;
 }

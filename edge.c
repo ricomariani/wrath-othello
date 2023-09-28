@@ -7,7 +7,8 @@ unsigned short *(flipt[8]);
 extern unsigned char val[256];
 extern unsigned short *pack_table;
 
-buildedge() {
+void buildedge()
+{
   unsigned long i;
 
   for (i = 0; i < 8; i++) {
@@ -40,7 +41,7 @@ buildedge() {
   fflush(stdout);
 }
 
-be(index) unsigned index;
+int be(unsigned index)
 {
   int lo, hi;
   int i, c, s;
@@ -54,20 +55,6 @@ be(index) unsigned index;
 
   if (hi & lo)
     return (0);
-
-  /* test packing/unpacking ******************************************
-  **
-  if (index != unpack(pack_board_row(index))) {
-    printf("Yipe! ");
-    rdisp(index);
-    printf(" != ");
-    rdisp(unpack(pack_board_row(index)));
-    printf("\n");
-    fflush(stdout);
-    exit(99);
-  }
-  **
-  *******************************************************************/
 
   if (lo == ((~hi) & 0xff)) {
     edge[index] = val[hi] << 9;
