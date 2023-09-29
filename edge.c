@@ -1,11 +1,10 @@
 #include <malloc.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "board.h"
 
 unsigned short *edge;
 unsigned short *(flipt[8]);
-extern unsigned char val[256];
-extern unsigned short *pack_table;
 
 void buildedge()
 {
@@ -57,7 +56,7 @@ int be(unsigned index)
     return (0);
 
   if (lo == ((~hi) & 0xff)) {
-    edge[index] = val[hi] << 9;
+    edge[index] = bit_count[hi] << 9;
 
     for (i = 0; i < 8; i++)
       flipt[i][pack_table[index]] = index;

@@ -4,10 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-extern char ascii_values[];
-extern int colour;
-extern BOARD initial;
-
 #define INDEX(board, x, y) (!!((board)[y] & (1 << (x))))
 #define RINDEX(board, x) (!!((board) & (1 << (x))))
 #define TYPE(board, x, y)                                                      \

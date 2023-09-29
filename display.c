@@ -3,7 +3,6 @@
 #include <stdlib.h>
 
 char ascii_values[] = "-BW?";
-extern int turn;
 
 // This is true or false if the bit is set in the row for one color
 #define RINDEX(rowbits, x) (!!((rowbits) & (1 << (x))))
@@ -64,11 +63,11 @@ void display_score(BOARD board)
 
   sc1 = 0;
   for (i = 0; i < 8; i++)
-    sc1 += val[board[1][i]];
+    sc1 += bit_count[board[1][i]];
   printf("\t\t\t\t\t\t    Score: W=%d ", sc1);
   sc2 = 0;
   for (i = 0; i < 8; i++)
-    sc2 += val[board[0][i]];
+    sc2 += bit_count[board[0][i]];
   printf("B=%d\n", sc2);
   turn = sc1 + sc2;
   fflush(stdout);

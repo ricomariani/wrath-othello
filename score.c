@@ -3,10 +3,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-extern char val[256], val2[256];
-extern turn;
-extern short *edge;
-
 score(board, colour) BOARD board;
 {
   register int i, s;
@@ -19,14 +15,14 @@ score(board, colour) BOARD board;
   t = s = 0;
   if (turn > ENDGAME) {
     for (i = 0; i < 8; i++)
-      s += val[me[i]];
+      s += bit_count[me[i]];
     return (s);
   }
 
   for (i = 2; i < 6; i++)
-    s += val2[me[i]];
-  s -= val[me[1] & 0x7e] + val[me[6] & 0x7e] +
-       ((val[me[1] & 0x42] + val[me[6] & 0x42]) << 2);
+    s += weighted_row_value[me[i]];
+  s -= bit_count[me[1] & 0x7e] + bit_count[me[6] & 0x7e] +
+       ((bit_count[me[1] & 0x42] + bit_count[me[6] & 0x42]) << 2);
 
   for (i = 0; i < 8; i++)
     t = (t << 1) | (!!(me[i] & (1 << 7)));

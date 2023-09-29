@@ -1,8 +1,7 @@
-#include "board.h"
 #include <stdio.h>
 #include <stdlib.h>
 
-extern int colour;
+#include "board.h"
 
 void load(FILE *f, BOARD board)
 {

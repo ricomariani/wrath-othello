@@ -1,8 +1,5 @@
 #include "board.h"
 
-extern unsigned short *(flipt[8]);
-extern unsigned short *pack_table;
-
 #define stuff(a, b, c)                                                         \
   (((((unsigned long)a) & 0xff) << 16) | ((((unsigned long)b) & 0xff) << 8) |  \
    ((c)&0xff))

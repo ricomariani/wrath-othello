@@ -1,8 +1,5 @@
 #include "board.h"
 
-extern unsigned short *(flipt[8]);
-extern unsigned short *pack_table;
-
 static void putdiag1(unsigned char *me, unsigned char *him, int x, int y, int row);
 static void putdiag2(unsigned char *me, unsigned char *him, int x, int y, int row);
 static int gethorz(unsigned char *me, unsigned char *him, int y);

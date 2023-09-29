@@ -5,8 +5,8 @@
 
 BOARD initial = {{0, 0, 0, 16, 8, 0, 0, 0}, {0, 0, 0, 8, 16, 0, 0, 0}};
 
-char val[256];
-char val2[256];
+char bit_count[256];
+char weighted_row_value[256];
 int turn;
 int consecutive_passes;
 int colour = 1;
@@ -64,19 +64,39 @@ main(argc, argv) char **argv;
   fflush(stdout);
 
   build_pack_table();
-  for (i = 0; i < 256; i++)
+  for (i = 0; i < 256; i++) {
     for (j = 0; j < 8; j++) {
-      val[i] += !!(i & (1 << j));
+      // this is a straight bit count
+      bit_count[i] += !!(i & (1 << j));
+
+      // this doesn't count the edge slots and gives negative
+      // value to the slots near the edge  so...
+      //  0 -1 1 1 1 1 -1 0
+      // the value of the row is the sum of the bit weights
+      // for each bit that is set in that row.  So the
+      // items near the end are not desireable.  The edges
+      // get no weight because there is a seperate edge table
+      // computation that determines the value of those cells.
+
       if (j > 1 && j < 6)
-        val2[i] += !!(i & (1 << j));
+        weighted_row_value[i] += !!(i & (1 << j));
+
       if (j == 1 || j == 6)
-        val2[i] -= !!(i & (1 << j));
+        weighted_row_value[i] -= !!(i & (1 << j));
     }
+  }
+
+  // make the edge tables
   buildedge();
+
+  // start with no passes
   consecutive_passes = 0;
 
+  // display the initial board and score
   display(initial);
   display_score(initial);
+
+  // repeat play until there are two passes, alternating color
   while (consecutive_passes < 2) {
     if (player && colour == play_side)
       user_input(initial, colour);

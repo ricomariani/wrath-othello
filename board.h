@@ -4,10 +4,18 @@
 typedef unsigned char BOARD[2][8];
 typedef unsigned char *LAYER;
 
-extern char val[256];
-extern char val2[256];
-extern int turn;
+extern BOARD initial;
+extern char ascii_values[];
+extern char bit_count[256];
+extern char weighted_row_value[256];
+extern char bit_count[256];
+extern char weighted_row_value[256];
+extern int colour;
 extern int consecutive_passes;
+extern int turn;
+extern unsigned short *edge;
+extern unsigned short *(flipt[8]);
+extern unsigned short *pack_table;
 
 void display(BOARD board);
 void display_one_row(int row);
@@ -19,3 +27,4 @@ int remove_scored_move(int *x, int *y, int lvl);
 
 int valid(BOARD board, int colour, int stack);
 void flip(BOARD board, int colour, int x, int y);
+void move(BOARD board, int colour, int x, int y);

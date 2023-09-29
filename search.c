@@ -9,20 +9,20 @@
 #define HORRIBLE -32000
 #define GREAT 32000
 
-extern int turn;
-int boards;
-jmp_buf env;
-int totaltime;
-int starttime;
-int thistime;
+static int boards;
+static jmp_buf env;
+static int totaltime;
+static int starttime;
+static int thistime;
 static searching_to_end;
-int bx, by;
-int bs;
-
+static int bx, by, bs;
 static limit;
-int IRQ;
+static int IRQ;
 
 static void bcpy(BOARD b1, BOARD b2);
+static int rsearch(BOARD board, int colour, int depth, int lvl);
+static int maxi(BOARD board, int colour, int depth, int a, int b);
+static int mini(BOARD board, int colour, int depth, int a, int b);
 
 void timeout() { IRQ = 1; }
 
@@ -113,7 +113,7 @@ no_moves:
   longjmp(env, 1);
 }
 
-int rsearch(BOARD board, int colour, int depth, int lvl)
+static int rsearch(BOARD board, int colour, int depth, int lvl)
 {
   int x, y, sc;
   BOARD brd;
@@ -161,7 +161,7 @@ int rsearch(BOARD board, int colour, int depth, int lvl)
   return bs;
 }
 
-int mini(BOARD board, int colour, int depth, int a, int b)
+static int mini(BOARD board, int colour, int depth, int a, int b)
 {
   if (IRQ)
     longjmp(env, 1);
@@ -199,7 +199,7 @@ int mini(BOARD board, int colour, int depth, int a, int b)
   }
 }
 
-int maxi(BOARD board, int colour, int depth, int a, int b)
+static int maxi(BOARD board, int colour, int depth, int a, int b)
 {
   if (IRQ)
     longjmp(env, 1);
@@ -249,7 +249,7 @@ void move(BOARD board, int colour, int x, int y)
   display(board);
 }
 
-void show(int depth, int score) {
+static void show(int depth, int score) {
   int i;
 
   for (i = 0; i < depth; i++)
