@@ -10,25 +10,25 @@
 // the stacks are all pre-allocated so there is no malloc
 int valid(BOARD board, int colour, int current_depth)
 {
-  // we put the board in a sea of zeros so we can go off either
-  // end with impunity
-
+  // words[0], [2] and [4] will always be zero.  They give a padding of empty board
+  // rows around the real boards at [1] and [3]. This lets us go off the top and bottom
+  // of the board with no bad consequences as we always hit empty rows.  As a
+  // result the loops can be simpler.
   uint64_t words[5];
-
   words[0] = 0;
   words[1] = *(uint64_t *)&board[colour][0];
   words[2] = 0;
   words[3] = *(uint64_t *)&board[!colour][0];
   words[4] = 0;
 
-  uint8_t *me  = (uint8_t*)(&words[0]);
-  uint8_t *him = (uint8_t*)(&words[2]);
+  uint8_t *me  = (uint8_t*)(&words[1]);
+  uint8_t *him = (uint8_t*)(&words[3]);
 
   reset_move_stack(current_depth);
   int found_anything = 0;
 
   for (int y = 0; y < 8; y++) {
-    unsigned row = (me[8+y] << 8) | him[8+y];
+    unsigned row = (me[y] << 8) | him[y];
     unsigned char used = (row | (row >> 8));
 
     // already full on this row, nothing to do
@@ -138,9 +138,8 @@ int valid(BOARD board, int colour, int current_depth)
     y1 |= y1 << 32;
 
     for (int i = 1; i < 8; i++) {
-      int index = 8 + y;
-      int up = index + i;   // we can go off the end
-      int down = index - i;
+      int up = y + i;   // we can go off the end
+      int down = y - i;
 
       uint64_t up_d0, up_d1, down_d0, down_d1, d;
 

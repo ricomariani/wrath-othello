@@ -1,19 +1,19 @@
-#include "board.h"
-#include "endgame.h"
 #include <setjmp.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
+
+#include "board.h"
+#include "endgame.h"
 
 #define HORRIBLE -32000
 #define GREAT 32000
 
 static int boards;
 static jmp_buf env;
-static int totaltime;
-static int starttime;
-static int thistime;
+static double total_time;
 static searching_to_end;
 static int bx, by, bs;
 static limit;
@@ -36,6 +36,13 @@ static void print_with_commas(int n) {
   }
 }
 
+static void print_duration(double duration) {
+  int seconds = (int)duration;
+  int minutes = seconds/60;
+  int millis = (duration - seconds) * 1000;
+  seconds %= 60;
+  printf("%d:%02d.%03d", minutes, seconds, millis);
+}
 
 int search(BOARD board, int colour, int *bestx, int *besty)
 {
@@ -54,7 +61,7 @@ int search(BOARD board, int colour, int *bestx, int *besty)
   searching_to_end = 0;
   IRQ = 0;
 
-  starttime = time(0);
+  clock_t start_time = clock();
   if (turn <= ENDGAME) {
     alarm(limit);
     start = 2;
@@ -69,18 +76,23 @@ int search(BOARD board, int colour, int *bestx, int *besty)
   if (setjmp(env)) {
     *bestx = bx;
     *besty = by;
-    thistime = time(0) - starttime;
-    if (!thistime)
-      thistime = 1;
+    clock_t end_time = clock();
+    double duration = (end_time - start_time + 0.0)/CLOCKS_PER_SEC;
 
-    totaltime += thistime;
+    if (duration == 0.0) {
+      duration = 0.000001;
+    }
+    total_time += duration;
 
     printf("\nEvaluated ");
     print_with_commas(boards);
-    printf(" boards in %d:%02d (", thistime / 60, thistime % 60);
-    print_with_commas(boards / thistime);
-    printf(" boards/sec). ");
-    printf("Total time used=%d:%02d \n", totaltime / 60, totaltime % 60);
+    printf(" boards in ");
+    print_duration(duration);
+    printf(" (");
+    print_with_commas((int)(boards / duration));
+    printf(" boards/sec).  Total time used: ");
+    print_duration(total_time);
+    printf("\n");
     fflush(stdout);
 
     return bs;
