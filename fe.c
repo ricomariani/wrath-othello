@@ -1,10 +1,8 @@
 #define DATA(mask, x) ((mask) & (1 << (x)))
 
-unsigned fe(mask, colour, x, dx)
-register unsigned mask;
-register int x;
+unsigned fe(unsigned mask, int colour, int x, int dx)
 {
-  register i, him, me, x0;
+  int i, him, me, x0;
 
   him = mask & 0xff;
   me = mask >> 8;

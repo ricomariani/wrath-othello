@@ -11,7 +11,8 @@
 #define RTYPE(board, x)                                                        \
   (RINDEX((board >> 8), x) + (RINDEX((board)&0xff, x) << 1))
 
-void safe_gets(char *buf, int len) {
+void safe_gets(char *buf, int len)
+{
   char *result = fgets(buf, len, stdin);
   if (result) {
     // clobber the trailing \n
@@ -21,10 +22,9 @@ void safe_gets(char *buf, int len) {
   }
 }
 
-int save() {
-  register x, y;
-  char name[100];
-  FILE *f;
+int save()
+{
+  char name[80];
 
   printf("filename (press return to abort): ");
   fflush(stdout);
@@ -32,12 +32,12 @@ int save() {
   if (!name[0])
     return (1);
 
-  f = fopen(name, "w");
+  FILE *f = fopen(name, "w");
   if (!f)
     return (1);
 
-  for (y = 0; y < 8; y++) {
-    for (x = 0; x < 8; x++) {
+  for (int y = 0; y < 8; y++) {
+    for (int x = 0; x < 8; x++) {
       putc(ascii_values[TYPE(initial, x, y)], f);
       putc(' ', f);
     }
@@ -49,22 +49,24 @@ int save() {
   return 0;
 }
 
-void catch () {
-  char name[100];
+// once used as the ^C handler
+static void catch ()
+{
+  char confirm[100];
 
   printf("\nreally quit (y/n)? ");
   fflush(stdout);
-  safe_gets(name, sizeof(name));
-  if (name[0] != 'y')
+  safe_gets(confirm, sizeof(confirm));
+  if (confirm[0] != 'y')
     return;
 
   printf("save game (y/n)? ");
   fflush(stdout);
-  safe_gets(name, sizeof(name));
-  if (!name[0])
+  safe_gets(confirm, sizeof(confirm));
+  if (!confirm[0])
     return;
 
-  if (name[0] == 'y' && save())
+  if (confirm[0] == 'y' && save())
     return;
 
   exit(0);

@@ -3,11 +3,18 @@
 
 #include "board.h"
 
-void load(FILE *f, BOARD board)
+void load(const char *name, BOARD board)
 {
   int i, j, n;
   char c[8];
   char s[80];
+
+  FILE *f = fopen(name, "r");
+  if (!f) {
+    fprintf(stderr, "wrath: I can't open this file: '%s'\n", name);
+    fflush(stderr);
+    exit(1);
+  }
 
   for (i = 0; i < 8; i++)
     board[0][i] = board[1][i] = 0;

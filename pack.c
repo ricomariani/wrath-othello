@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "board.h"
+
 // The black and white occupied slots of a board row
 // are represented by two bytes of a short. But there
 // are only 3 combinations, none, black, and white.

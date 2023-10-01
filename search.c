@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
 
 #include "board.h"
 #include "endgame.h"
@@ -14,9 +15,9 @@
 static int boards;
 static jmp_buf env;
 static double total_time;
-static searching_to_end;
+static int searching_to_end;
 static int bx, by, bs;
-static limit;
+static int limit;
 static int IRQ;
 
 static void bcpy(BOARD b1, BOARD b2);
@@ -24,7 +25,10 @@ static int rsearch(BOARD board, int colour, int depth, int lvl);
 static int maxi(BOARD board, int colour, int depth, int a, int b);
 static int mini(BOARD board, int colour, int depth, int a, int b);
 
-void timeout() { IRQ = 1; }
+static void timeout(int signum)
+{
+  IRQ = 1;
+}
 
 static void print_with_commas(int n) {
   if (n < 1000) {

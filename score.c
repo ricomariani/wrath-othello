@@ -3,11 +3,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-score(board, colour) BOARD board;
+int score(BOARD board, int colour)
 {
-  register int i, s;
-  register unsigned int t;
-  register unsigned char *me, *him;
+  int i, s;
+  unsigned int t;
+  unsigned char *me, *him;
 
   me = &board[colour][0];
   him = &board[!colour][0];

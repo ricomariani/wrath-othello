@@ -12,7 +12,7 @@ int consecutive_passes;
 int colour = 1;
 void catch ();
 
-main(argc, argv) char **argv;
+int main(int argc, char **argv)
 {
   int i, j;
   int player, play_side;
@@ -50,13 +50,7 @@ main(argc, argv) char **argv;
         fflush(stderr);
         exit(1);
       }
-      f = fopen(argv[2], "r");
-      if (!f) {
-        fprintf(stderr, "wrath: I can't open this file: '%s'\n", argv[2]);
-        fflush(stderr);
-        exit(1);
-      }
-      load(f, initial);
+      load (argv[2], initial);
     }
   }
 

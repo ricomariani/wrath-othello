@@ -1,12 +1,9 @@
-
 #include "board.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#define STACK 0
-
-void safe_gets(char *, int);
+#define INITIAL_DEPTH 0
 
 int user_input(BOARD board, int colour)
 {
@@ -14,11 +11,11 @@ int user_input(BOARD board, int colour)
   int p, ux, uy, x, y, i, l;
 
 again:
-  reset_move_stack (STACK);
-  while (pop_move(&x, &y, STACK))
+  reset_move_stack (INITIAL_DEPTH);
+  while (pop_move(&x, &y, INITIAL_DEPTH))
     ;
 
-  valid(board, colour, STACK);
+  valid(board, colour, INITIAL_DEPTH);
 
   printf("Please enter a move --> ");
   fflush(stdout);
@@ -75,7 +72,7 @@ again:
   }
 
   if (p == 1) {
-    if (pop_move(&x, &y, STACK)) {
+    if (pop_move(&x, &y, INITIAL_DEPTH)) {
       printf("You can't pass unless you have no moves\n");
       fflush(stdout);
       goto again;
@@ -86,7 +83,7 @@ again:
     return (0);
   }
 
-  while (pop_move(&x, &y, STACK)) {
+  while (pop_move(&x, &y, INITIAL_DEPTH)) {
     if (x == ux && y == uy) {
       printf("Move to %c%c accepted.\n", x + 'a', '8' - y);
       fflush(stdout);
