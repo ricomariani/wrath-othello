@@ -3,6 +3,15 @@
 
 #include "board.h"
 
+static void safe_fgets(char *s, int len, FILE *f) {
+  char *result = fgets(s, len, f);
+  if (!result) {
+    fprintf(stderr, "wrath: Unable to parse input board\n");
+    fflush(stderr);
+    exit(1);
+  }
+}
+
 void load(const char *name, BOARD board)
 {
   int i, j, n;
@@ -20,14 +29,17 @@ void load(const char *name, BOARD board)
     board[0][i] = board[1][i] = 0;
 
   for (i = 0; i < 8; i++) {
-    fgets(s, 80, f);
-    n = sscanf(s, " %c %c %c %c %c %c %c %c ", &c[0], &c[1], &c[2], &c[3],
-               &c[4], &c[5], &c[6], &c[7]);
+    safe_fgets(s, sizeof(s), f);
+    
+    n = sscanf(s, " %c %c %c %c %c %c %c %c ", 
+      &c[0], &c[1], &c[2], &c[3],
+      &c[4], &c[5], &c[6], &c[7]);
     if (n != 8) {
       fprintf(stderr, "wrath: Unable to parse input board\n");
       fflush(stderr);
       exit(1);
     }
+
     for (j = 0; j < 8; j++)
       switch (c[j]) {
 
@@ -50,7 +62,15 @@ void load(const char *name, BOARD board)
         exit(1);
       }
   }
-  fscanf(f, " %c to play", c);
+
+  safe_fgets(s, sizeof(s), f);
+  safe_fgets(s, sizeof(s), f);
+  n = sscanf(s, " %c to play", c);
+  if (n != 1) {
+    fprintf(stderr, "wrath: Unable to parse input board\n");
+    fflush(stderr);
+    exit(1);
+  }
   switch (c[0]) {
   case 'w':
   case 'W':
@@ -66,6 +86,7 @@ void load(const char *name, BOARD board)
     fflush(stderr);
     exit(1);
   }
+
   printf("Picking up where we left off... %s to play\n",
          colour ? "White" : "Black");
 }

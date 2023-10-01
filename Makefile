@@ -4,7 +4,5 @@ SOURCE = main.c display.c valid.c stack.c search.c \
      
 CFLAGS = -O3 -g
 
-CC = clang
-
 all: $(OBJECTS)
 	$(CC) -o wrath $(CFLAGS) $(SOURCE)
