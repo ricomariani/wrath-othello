@@ -13,7 +13,7 @@
 // So literally pack_table[mask] == pack_board_row(mask)
 // for all valid masks.  We skip any that have both black
 // and white set.
-unsigned short *pack_table;
+unsigned short pack_table[65536];
 
 
 static int pack_board_row(int board_row)
@@ -61,13 +61,6 @@ static int unpack_board_row(int packed_value)
 
 void build_pack_table()
 {
-  pack_table = (unsigned short *)calloc(65536, sizeof(short));
-
-  if (!pack_table) {
-    printf("Error, can't allocate enough memory for pack table\n");
-    exit(1);
-  }
-  
   printf("Building pack_board_row table\n");
   fflush(stdout);
 

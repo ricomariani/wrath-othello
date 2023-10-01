@@ -15,7 +15,7 @@ extern int consecutive_passes;
 extern int turn;
 extern unsigned short *edge;
 extern unsigned short *(flipt[8]);
-extern unsigned short *pack_table;
+extern unsigned short pack_table[65536];
 
 void display(BOARD board);
 void display_one_row(int row);

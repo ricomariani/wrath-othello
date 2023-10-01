@@ -10,7 +10,8 @@ char weighted_row_value[256];
 int turn;
 int consecutive_passes;
 int colour = 1;
-void catch ();
+
+static int test_mode = 0;
 
 int main(int argc, char **argv)
 {
@@ -51,6 +52,11 @@ int main(int argc, char **argv)
         exit(1);
       }
       load (argv[2], initial);
+
+      if (argv[1][2] == 't' | argv[1][2] == 'T') {
+         // do one move and stop
+         test_mode = 1;
+      }
     }
   }
 
@@ -99,5 +105,10 @@ int main(int argc, char **argv)
 
     display_score(initial);
     colour = !colour;
+
+    if (test_mode) {
+      printf("test complete\n");
+      exit(0);
+    }
   }
 }
