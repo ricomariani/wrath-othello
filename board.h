@@ -13,8 +13,8 @@ extern char weighted_row_value[256];
 extern int colour;
 extern int consecutive_passes;
 extern int turn;
-extern unsigned short *edge;
-extern unsigned short *(flipt[8]);
+extern unsigned short edge[65536];
+extern unsigned short flipt[6561][8];
 extern unsigned short pack_table[65536];
 
 void display(BOARD board);
@@ -47,8 +47,6 @@ void move(BOARD board, int colour, int x, int y);
 void display(BOARD board);
 void display_one_row(int rowbits);
 void display_score(BOARD board);
-unsigned short *edge;
-unsigned short *(flipt[8]);
 
 void buildedge(void);
 int be(unsigned index);

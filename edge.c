@@ -1,38 +1,16 @@
-#include <malloc.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "board.h"
 
-unsigned short *edge;
-unsigned short *(flipt[8]);
+unsigned short edge[65536];
+unsigned short flipt[6561][8];
 
 void buildedge()
 {
-  unsigned long i;
-
-  for (i = 0; i < 8; i++) {
-    flipt[i] = (unsigned short *)malloc(6561 * sizeof(short));
-    if (!flipt[i]) {
-      printf("Error, can't allocate enough memory for flip table\n");
-      fflush(stdout);
-      exit(1000);
-    }
-  }
-
-  edge = (unsigned short *)calloc(65536, sizeof(short));
-  if (!edge) {
-    printf("Error, can't allocate enough memory for edge table\n");
-    fflush(stdout);
-    exit(1);
-  }
-
   printf("Building edge table\n");
   fflush(stdout);
 
-  for (i = 0; i < 65536; i++)
-    edge[i] = 0;
-
-  for (i = 0; i < 65536; i++)
+  for (int i = 0; i < 65536; i++)
     if (!(i & (i >> 8)))
       be(i);
 
@@ -59,7 +37,7 @@ int be(unsigned index)
     edge[index] = bit_count[hi] << 9;
 
     for (i = 0; i < 8; i++)
-      flipt[i][pack_table[index]] = index;
+      flipt[pack_table[index]][i] = index;
 
     return (edge[index]);
   }
@@ -69,7 +47,7 @@ int be(unsigned index)
   c = s = 0;
   for (i = 0; i < 8; i++) {
     if (b & (1 << i)) {
-      flipt[i][pack_table[index]] = index;
+      flipt[pack_table[index]][i] = index;
       continue;
     }
     c += 2;
@@ -78,7 +56,7 @@ int be(unsigned index)
     t = fe(t, 0, i, 1);
     t = fe(t, 0, i, -1);
 
-    flipt[i][pack_table[index]] = t;
+    flipt[pack_table[index]][i] = t;
 
     t2 = index;
     t2 = fe(t2, 1, i, 1);
