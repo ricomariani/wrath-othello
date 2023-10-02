@@ -2,7 +2,6 @@
 #define WHITE 1
 
 #include <inttypes.h>
-#include <malloc.h>
 #include <memory.h>
 #include <setjmp.h>
 #include <signal.h>
@@ -12,6 +11,7 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <assert.h>
 
 typedef unsigned char BOARD[2][8];
 typedef unsigned char *LAYER;
@@ -75,9 +75,7 @@ void display(BOARD board);
 void display_one_row(int rowbits);
 void display_score(BOARD board);
 
-void buildedge(void);
-int be(unsigned index);
-void build_pack_table(void);
+void build_tables(void);
 
 void load(const char *name, BOARD board);
 int score(BOARD board, int colour);

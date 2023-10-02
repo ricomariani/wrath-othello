@@ -60,36 +60,8 @@ int main(int argc, char **argv)
   printf("Give me about thirty seconds to build up my tables please\n");
   fflush(stdout);
 
-  build_pack_table();
-  for (i = 0; i < 256; i++) {
-    // we do it in this order so that bit values has the lowest bits in the LSB
-    for (j = 7; j >= 0; j--) {
-      // this is a straight bit count
-      if (i & (1<<j)) {
-        bit_count[i]++;
-        bit_values[i] <<= 4;
-        bit_values[i] |= 0x8 | j;
-      }
-
-      // this doesn't count the edge slots and gives negative
-      // value to the slots near the edge  so...
-      //  0 -1 1 1 1 1 -1 0
-      // the value of the row is the sum of the bit weights
-      // for each bit that is set in that row.  So the
-      // items near the end are not desireable.  The edges
-      // get no weight because there is a seperate edge table
-      // computation that determines the value of those cells.
-
-      if (j > 1 && j < 6)
-        weighted_row_value[i] += !!(i & (1 << j));
-
-      if (j == 1 || j == 6)
-        weighted_row_value[i] -= !!(i & (1 << j));
-    }
-  }
-
-  // make the edge tables
-  buildedge();
+  // make the lookup tables
+  build_tables();
 
   // start with no passes
   consecutive_passes = 0;
