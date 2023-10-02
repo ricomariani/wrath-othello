@@ -1,3 +1,5 @@
+#include "board.h"
+
 #define DATA(mask, x) ((mask) & (1 << (x)))
 
 unsigned fe(unsigned mask, int colour, int x, int dx)

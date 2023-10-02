@@ -1,14 +1,16 @@
+#include "board.h"
+
 // This is for keeping valid moves
 
 typedef struct {
   char x;
   char y;
-} move;
+} xy;
 
 // We keep moves we are considering here, this is for holding the next set of valid moves
 typedef struct {
   char top;
-  move moves[64];
+  xy moves[64];
 } stack;
 
 // these are all the stacks we will ever need, no malloc

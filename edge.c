@@ -1,5 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include "board.h"
 
 unsigned short edge[65536];

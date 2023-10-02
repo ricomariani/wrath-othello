@@ -1,8 +1,22 @@
 #define BLACK 0
 #define WHITE 1
 
+#include <inttypes.h>
+#include <malloc.h>
+#include <memory.h>
+#include <setjmp.h>
+#include <signal.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <unistd.h>
+
 typedef unsigned char BOARD[2][8];
 typedef unsigned char *LAYER;
+
+#define ENDGAME 44
 
 extern BOARD initial;
 extern char ascii_values[];

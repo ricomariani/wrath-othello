@@ -1,7 +1,3 @@
-#include <malloc.h>
-#include <stdio.h>
-#include <stdlib.h>
-
 #include "board.h"
 
 // The black and white occupied slots of a board row

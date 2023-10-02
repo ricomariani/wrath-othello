@@ -1,7 +1,4 @@
 #include "board.h"
-#include "endgame.h"
-#include <stdio.h>
-#include <stdlib.h>
 
 void computer_input(BOARD board, int colour)
 {

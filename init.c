@@ -1,6 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
-
 #include "board.h"
 
 static void safe_fgets(char *s, int len, FILE *f) {

@@ -1,8 +1,4 @@
-
 #include "board.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 #define INDEX(board, x, y) (!!((board)[y] & (1 << (x))))
 #define RINDEX(board, x) (!!((board) & (1 << (x))))

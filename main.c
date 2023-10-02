@@ -1,7 +1,4 @@
 #include "board.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <locale.h>
 
 BOARD initial = {{0, 0, 0, 16, 8, 0, 0, 0}, {0, 0, 0, 8, 16, 0, 0, 0}};
 
@@ -18,8 +15,6 @@ int main(int argc, char **argv)
   int i, j;
   int player, play_side;
   FILE *f;
-
-  setlocale(LC_ALL, "");
 
   player = 0;
   play_side = 0;

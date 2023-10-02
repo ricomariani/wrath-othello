@@ -1,13 +1,4 @@
-#include <setjmp.h>
-#include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include <unistd.h>
-
 #include "board.h"
-#include "endgame.h"
 
 #define HORRIBLE -32000
 #define GREAT 32000

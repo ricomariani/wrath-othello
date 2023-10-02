@@ -1,4 +1,4 @@
-#include <memory.h>
+#include "board.h"
 
 // This is keeping sorted scores, there are two sets of scores
 

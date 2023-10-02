@@ -1,7 +1,4 @@
 #include "board.h"
-#include "endgame.h"
-#include <stdio.h>
-#include <stdlib.h>
 
 int score(BOARD board, int colour)
 {

@@ -1,5 +1,3 @@
-#include <memory.h>
-#include <stdint.h>
 #include "board.h"
 
 #define tobyte(x) ((unsigned char)(x))
