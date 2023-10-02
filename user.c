@@ -2,28 +2,34 @@
 
 #define INITIAL_DEPTH 0
 
+// here we ask the user what they want to do.
 int user_input(BOARD board, int colour)
 {
-  char s[80];
-  int p, ux, uy, x, y, i, l;
+again:;
+  // user input x and y
+  int user_x = -1;
+  int user_y = -1;
+  int user_pass = 0;
 
-again:
-  reset_move_stack (INITIAL_DEPTH);
-  while (pop_move(&x, &y, INITIAL_DEPTH))
-    ;
+  reset_move_stack(INITIAL_DEPTH);
 
+  // recompute the valid moves and put them on the stack
+  // they go on stack number INITIAL_DEPTH (i.e. the root)
   valid(board, colour, INITIAL_DEPTH);
 
   printf("Please enter a move --> ");
   fflush(stdout);
+
+  char s[80];
   safe_gets(s, sizeof(s));
 
-  l = strlen(s);
-  uy = ux = -1;
-  p = 0;
+  int len = strlen(s);
 
-  for (i = 0; i < l; i++) {
+  user_pass = 0;
+
+  for (int i = 0; i < len; i++) {
     if (s[i] == '?') {
+      // help
       printf("\n");
       printf("?\t\t\t\t:display this help page\n");
       printf("[a-z][1-8]\t\t\t:enter a move\n");
@@ -36,18 +42,23 @@ again:
       goto again;
     }
     if (s[i] >= 'a' && s[i] <= 'h') {
-      ux = s[i] - 'a';
+      // column
+      user_x = s[i] - 'a';
     }
     if (s[i] >= '1' && s[i] <= '8') {
-      uy = '8' - s[i];
+      // row
+      user_y = '8' - s[i];
     }
     if (s[i] == 'p') {
-      p = 1;
+      // pass
+      user_pass = 1;
     }
     if (s[i] == 'q') {
+      // quit
       exit(0);
     }
     if (s[i] == 'r') {
+      // redraw the display
       display(board);
       display_score(board);
       goto again;
@@ -62,13 +73,15 @@ again:
     }
   }
 
-  if ((ux == -1 || uy == -1) && p == 0) {
+  if ((user_x == -1 || user_y == -1) && user_pass == 0) {
     printf("?syntax error\n");
     fflush(stdout);
     goto again;
   }
 
-  if (p == 1) {
+  if (user_pass == 1) {
+    // make sure there are no moves
+    int x, y;
     if (pop_move(&x, &y, INITIAL_DEPTH)) {
       printf("You can't pass unless you have no moves\n");
       fflush(stdout);
@@ -77,19 +90,21 @@ again:
     consecutive_passes++;
     printf("Pass accepted.\n");
     fflush(stdout);
-    return (0);
+    return 0;
   }
 
+  // make sure that the entered move is a valid move
+  int x, y;
   while (pop_move(&x, &y, INITIAL_DEPTH)) {
-    if (x == ux && y == uy) {
+    if (x == user_x && y == user_y) {
       printf("Move to %c%c accepted.\n", x + 'a', '8' - y);
       fflush(stdout);
       move(board, colour, x, y);
       consecutive_passes = 0;
-      return (0);
+      return 0;
     }
   }
-  printf("You can't move to %c%c.\n", ux + 'a', '8' - uy);
+  printf("You can't move to %c%c.\n", user_x + 'a', '8' - user_y);
   fflush(stdout);
   goto again;
 }

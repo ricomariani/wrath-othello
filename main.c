@@ -56,6 +56,7 @@ int main(int argc, char **argv)
     }
   }
 
+  // LOL, it was 30 seconds on a slice of a VAX780 :D
   printf("Give me about thirty seconds to build up my tables please\n");
   fflush(stdout);
 

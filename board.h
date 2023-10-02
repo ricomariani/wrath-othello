@@ -16,7 +16,19 @@
 typedef unsigned char BOARD[2][8];
 typedef unsigned char *LAYER;
 
+// At move 44 (below) we will seek to the end of the game (20 ply)
+// This takes about 90 seconds on a modern processor.  It used to take
+// about 10 minutes this number was more like 50 IIRC. From this
+// point on the game plays perfectly and the only score needed
+// it count of pieces.  Hueristics are out because we can see
+// all the way to the end. The faster scoring helps this to finish
+// sooner.
 #define ENDGAME 44
+
+// By happenstance it works out that a neutral board score is 8187, 
+// all the scores are positive, so we subtract that out to make it
+// seem positive or negative for bad/good.
+#define SCORE_BIAS 8187
 
 extern BOARD initial;
 extern char ascii_values[];

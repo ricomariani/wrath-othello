@@ -141,7 +141,7 @@ static int rsearch(BOARD board, int colour, int depth, int lvl)
   bs = mini(brd, !colour, depth - 1, HORRIBLE, GREAT);
   bx = x;
   by = y;
-  printf("%d  ", bs - ((turn > ENDGAME) ? 0 : 8187));
+  printf("%d  ", bs - ((turn > ENDGAME) ? 0 : SCORE_BIAS));
   fflush(stdout);
   insert_scored_move(x, y, bs, !lvl);
 
@@ -160,7 +160,7 @@ static int rsearch(BOARD board, int colour, int depth, int lvl)
     } else
       putchar('<');
 
-    printf("%d  ", sc - ((turn > ENDGAME) ? 0 : 8187));
+    printf("%d  ", sc - ((turn > ENDGAME) ? 0 : SCORE_BIAS));
     fflush(stdout);
   }
   printf("\n");
