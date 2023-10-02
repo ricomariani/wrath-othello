@@ -21,6 +21,7 @@ typedef unsigned char *LAYER;
 extern BOARD initial;
 extern char ascii_values[];
 extern char bit_count[256];
+extern uint64_t bit_values[256];
 extern char weighted_row_value[256];
 extern char bit_count[256];
 extern char weighted_row_value[256];

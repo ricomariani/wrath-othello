@@ -2,7 +2,6 @@
 
 #define tobyte(x) ((unsigned char)(x))
 #define load_state(a, b, c) ((tobyte(a) << 16) | (tobyte(b) << 8) | tobyte(c))
-#define unload_state(a) tobyte(((a) >> 16) | ((a) >> 8) | (a))
 
 // the current depth just tell us which stack to put the valid moves on
 // the stacks are all pre-allocated so there is no malloc
@@ -161,20 +160,24 @@ int valid(BOARD board, int colour, int current_depth)
     }
     // read out: state 3 is valid move
     y0 &= y1;
-    y0 |= (y0 >> 32);
-    row = unload_state(y0);  // merge the successes from the 3 directions
+    y0 |= y0 >> 32;
+    y0 |= y0 >> 16;
+    y0 |= y0 >> 8;
+    row = y0 & 0xff;
 
-    row &= ~(used);
-
-    // now if anything was found, log it
+    // bit_values has one bit number in each nibble
+    // this saves us from looking for all 8 bits
+    // when often there is only 1 bit set
     if (row) {
-      for (int i = 0; i < 8; i++) {
-        if (row & (1 << i)) {
-          push(i, y, current_depth);
-          found_anything = 1;
-        }
+      uint64_t bits = bit_values[row];
+      while (bits) {
+        int x = (int)(bits & 0x7);
+        bits >>= 4;
+        push(x, y, current_depth);
+        found_anything = 1;
       }
     }
   }
+
   return found_anything;
 }

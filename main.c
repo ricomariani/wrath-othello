@@ -7,6 +7,7 @@ char weighted_row_value[256];
 int turn;
 int consecutive_passes;
 int colour = 1;
+uint64_t bit_values[256];
 
 static int test_mode = 0;
 
@@ -60,9 +61,14 @@ int main(int argc, char **argv)
 
   build_pack_table();
   for (i = 0; i < 256; i++) {
-    for (j = 0; j < 8; j++) {
+    // we do it in this order so that bit values has the lowest bits in the LSB
+    for (j = 7; j >= 0; j--) {
       // this is a straight bit count
-      bit_count[i] += !!(i & (1 << j));
+      if (i & (1<<j)) {
+        bit_count[i]++;
+        bit_values[i] <<= 4;
+        bit_values[i] |= 0x8 | j;
+      }
 
       // this doesn't count the edge slots and gives negative
       // value to the slots near the edge  so...
