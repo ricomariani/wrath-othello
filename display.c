@@ -16,7 +16,6 @@ char ascii_values[] = "-BW?";
 // the values are 0 empty, 1 black and 2 white just like the ascii table above
 #define RTYPE(rowbits, x) (RINDEX((rowbits >> 8), x) + (RINDEX((rowbits)&0xff, x) << 1))
 
-
 // draw all the rows of the board
 void display(BOARD board)
 {
@@ -53,19 +52,24 @@ void display_one_row(int rowbits) {
   fflush(stdout);
 }
 
-// this is the raw score just counts
+// this is the raw score, just counts
 // the evaulation is not this at all.
 void display_score(BOARD board)
 {
   int sc1, sc2, i;
 
   sc1 = 0;
-  for (i = 0; i < 8; i++)
+  for (i = 0; i < 8; i++) {
     sc1 += bit_count[board[1][i]];
+  }
+
   printf("\t\t\t\t\t\t    Score: W=%d ", sc1);
+
   sc2 = 0;
-  for (i = 0; i < 8; i++)
+  for (i = 0; i < 8; i++) {
     sc2 += bit_count[board[0][i]];
+  }
+
   printf("B=%d\n", sc2);
   turn = sc1 + sc2;
   fflush(stdout);
