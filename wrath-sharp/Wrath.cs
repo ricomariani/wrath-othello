@@ -39,7 +39,7 @@ struct BOARD {
   }
 
   public BOARD(ulong b, ulong w) {
-    data = Vector128.Create(b).WithElement(1,w);
+    data = Vector128.Create(b,w);
   }
 
   public HBOARD half(bool is_white) {
@@ -47,7 +47,7 @@ struct BOARD {
   }
 
   public BOARD(HBOARD lo, HBOARD hi) {
-    data = Vector128.Create(lo.getUlong()).WithElement(1, hi.getUlong());
+    data = Vector128.Create(lo.getUlong(), hi.getUlong());
   }
 }
 
@@ -65,7 +65,7 @@ struct HBOARD {
   }
 
   public HBOARD(ulong x) {
-    data = Vector128<ulong>.Zero.WithElement(0, x).AsByte();
+    data = Vector128.Create(x, (ulong)0).AsByte();
   }
 
   public ulong getUlong() {
