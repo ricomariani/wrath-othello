@@ -802,6 +802,7 @@ static void Main(string[] args)
 
 public void Begin(string[] args) 
 {
+  Console.WriteLine("Framework Version: {0}", Environment.Version);
   build_tables();
 
   bool player = false;
