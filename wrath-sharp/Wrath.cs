@@ -1,6 +1,10 @@
 using System;
+using System.Diagnostics;
 using System.Numerics;
+using System.Reflection;
+using System.Reflection.Metadata;
 using System.Runtime.Intrinsics;
+using Microsoft.Win32.SafeHandles;
 
 class Othello {
 
@@ -69,24 +73,22 @@ struct HBOARD {
   }
 }
 
-static int turn = 0;
-static int consecutive_passes = 0;
-static int is_white_turn = 1;
-static readonly int ENDGAME = 44;
-static readonly int SCORE_BIAS = 8187;
+int turn = 0;
+int consecutive_passes = 0;
+bool is_white_turn = true;
+readonly int ENDGAME = 44;
+readonly int SCORE_BIAS = 8187;
 
-/*
 // the computer provides "input" for the next move
 // it's done uniformly like this so that the logic for
 // player vs. computer is basically the same as computer
 // vs. itself.
-static void computer_input(BOARD board, bool is_white)
+void computer_input(BOARD board, bool is_white)
 {
-  int x, y;
-
+  byte x, y;
   int score = search(board, is_white, out x, out y);
-  int score = 0;  x = 0; y = 0;
-  if (x == -1) {
+
+  if (x == 0xff) {
     Console.WriteLine("{0} has to pass.", is_white ? 'W' : 'B');
     consecutive_passes++;
   } else {
@@ -94,28 +96,151 @@ static void computer_input(BOARD board, bool is_white)
     int score_bias = turn > ENDGAME ? 0 : SCORE_BIAS;
     Console.WriteLine("best move for {0} is at {1}{2} (score {3})", is_white ? 'W' : 'B',
            x + 'a', '8' - y, score - score_bias);
-    move(board, is_white, x, y);
+
+    move(ref board, is_white, x, y);
     consecutive_passes = 0;
   }
 }
-*/
 
-static string ascii_values = "-BW?";
+readonly byte INITIAL_DEPTH = 0;
+
+// here we ask the user what they want to do.
+bool user_input(BOARD board, bool  is_white)
+{
+again:;
+  // user input x and y
+  int user_x = -1;
+  int user_y = -1;
+
+  reset_move_stack(INITIAL_DEPTH);
+
+  // recompute the valid moves and put them on the stack
+  // they go on stack number INITIAL_DEPTH (i.e. the root)
+  valid(board, is_white, INITIAL_DEPTH);
+
+  Console.Write("Please enter a move --> ");
+
+  string? s = Console.ReadLine();
+  if (s == null) {
+    // end of file
+    Environment.Exit(0);
+  }
+
+  int len = s.Length;
+
+  bool user_pass = false;
+
+  for (int i = 0; i < len; i++) {
+    if (s[i] == '?') {
+      // help
+      Console.WriteLine("");
+      Console.WriteLine("?\t\t\t\t:display this help page");
+      Console.WriteLine("[a-z][1-8]\t\t\t:enter a move");
+      Console.WriteLine("p\t\t\t\t:pass this turn");
+      Console.WriteLine("r\t\t\t\t:redraw the board");
+      Console.WriteLine("s\t\t\t\t:save current game");
+      Console.WriteLine("q\t\t\t\t:quit current game");
+      Console.WriteLine("");
+      goto again;
+    }
+    if (s[i] >= 'a' && s[i] <= 'h') {
+      // column
+      user_x = s[i] - 'a';
+    }
+    if (s[i] >= '1' && s[i] <= '8') {
+      // row
+      user_y = '8' - s[i];
+    }
+    if (s[i] == 'p') {
+      // pass
+      user_pass = true;
+    }
+    if (s[i] == 'q') {
+      // quit
+      Environment.Exit(0);
+    }
+    if (s[i] == 'r') {
+      // redraw the display
+      display(board);
+      display_score(board);
+      goto again;
+    }
+    if (s[i] == 's') {
+      if (save()) {
+        goto again;
+      }
+      else {
+        Environment.Exit(0);
+      }
+    }
+  }
+
+  if ((user_x == 0xff || user_y == 0xff) && !user_pass) {
+    Console.WriteLine("?syntax error\n");
+    goto again;
+  }
+
+  byte x, y;
+  
+  if (user_pass) {
+    // make sure there are no moves
+    if (pop_move(out x, out y, INITIAL_DEPTH)) {
+      Console.WriteLine("You can't pass unless you have no moves");
+      goto again;
+    }
+    consecutive_passes++;
+    Console.WriteLine("Pass accepted.\n");
+    return false;
+  }
+
+  // make sure that the entered move is a valid move
+  while (pop_move(out x, out y, INITIAL_DEPTH)) {
+    if (x == user_x && y == user_y) {
+      Console.WriteLine("Move to {0}{1} accepted.\n", (char)(x + 'a'), (char)('8' - y));
+      move(ref board, is_white, x, y);
+      consecutive_passes = 0;
+      return false;
+    }
+  }
+
+  Console.WriteLine("You can't move to {0}{1}.\n", (char)(user_x + 'a'), (char)('8' - user_y));
+  goto again;
+}
+
+
+void move(ref BOARD board, bool is_white, int x, int y)
+{
+  board.put(is_white, y, (byte)(board.get(is_white, y) | (1<<x)));
+  flip(ref board, is_white, x, y);
+  display(board);
+}
+
+void show(int depth, int score)
+{
+  int i;
+
+  for (i = 0; i < depth; i++)
+    Console.Write('\t');
+
+  Console.WriteLine("{0}", score);
+}
+
+string ascii_values = "-BW?";
 
 // This is true or false if the bit is set in the row for one color
-static int RINDEX(int rowbits, int x) {
+int RINDEX(int rowbits, int x) {
   return (rowbits & (1 << x)) != 0 ? 1 : 0;
 }
 
 // this get the row out of the given board (black or white) and then is true
 // if that board has a bit at x, y
-static int INDEX(HBOARD hb, int x, int y) {
+int INDEX(HBOARD hb, int x, int y) {
   byte b = hb.get(y);
   return (b & (1 << x)) != 0 ? 1 : 0;
 }
 
 // this gets the type of the row board[0] is black and board[1] is white
-static int TYPE(BOARD board, int x, int y) {
+int TYPE(BOARD board, int x, int y) {
   byte b1 = board.half(false).get(y);
   byte mask = (byte)(1 << x);
   int i1 = (b1 & mask) != 0 ? 1 : 0;
@@ -126,12 +251,12 @@ static int TYPE(BOARD board, int x, int y) {
 
 // here row has a single row, black is the high bits and white is the low bits
 // the values are 0 empty, 1 black and 2 white just like the ascii table above
-static int RTYPE(int row, int x) {
+int RTYPE(int row, int x) {
    return ((row >> (8 + x)) & 1) + 2 * ((row >> x) & 1);
 }
 
 // draw all the rows of the board
-static void display(BOARD board)
+void display(BOARD board)
 {
   int  x, y;
 
@@ -155,7 +280,7 @@ static void display(BOARD board)
   Console.Write('\n');
 }
 
-static BOARD initial = new BOARD(
+BOARD initial = new BOARD(
    Vector128<byte>
     .Zero
     .WithElement(3, (byte)0x10)
@@ -164,23 +289,16 @@ static BOARD initial = new BOARD(
     .WithElement(12, (byte)0x10));
 
 
-static void display_one_row(int rowbits) {
+void display_one_row(int rowbits) {
   for (int x = 0; x < 8; x++) {
     Console.Write(ascii_values[RTYPE(rowbits, x)]);
   }
 }
 
 
-static public void Main(string[] args) {
-  display(initial);
-  display_one_row(0x1824);
-  build_tables();
-  Console.WriteLine();
-}
-
 // this is the raw score, just counts
 // the evaluation is not this at all.
-static void display_score(BOARD board)
+void display_score(BOARD board)
 {
   int sc1, sc2, i;
 
@@ -200,8 +318,7 @@ static void display_score(BOARD board)
   turn = sc1 + sc2;
 }
 
-
-static void build_lookups()
+void build_lookups()
 {
   for (int i = 0; i < 256; i++) {
     // we do it in this order so that bit values has the lowest bits in the LSB
@@ -233,9 +350,9 @@ static void build_lookups()
   }
 }
 
-static byte[] bit_count = new byte[256];
-static byte[] weighted_row_value = new byte[256];
-static ulong[] bit_values = new ulong[256];
+byte[] bit_count = new byte[256];
+byte[] weighted_row_value = new byte[256];
+ulong[] bit_values = new ulong[256];
 
 
 // The black and white occupied slots of a board row
@@ -247,9 +364,9 @@ static ulong[] bit_values = new ulong[256];
 // So literally pack_table[mask] == pack_board_row(mask)
 // for all valid masks.  We skip any that have both black
 // and white set.
-static ushort[] pack_table = new ushort[65536];
+ushort[] pack_table = new ushort[65536];
 
-static int pack_board_row(int board_row)
+int pack_board_row(int board_row)
 {
   int s = 0;
 
@@ -263,7 +380,7 @@ static int pack_board_row(int board_row)
 }
 
 // This is only used for testing... see the test code below
-static int unpack_board_row(int packed_value)
+int unpack_board_row(int packed_value)
 {
   int d;
   int board_row = 0;
@@ -293,11 +410,19 @@ static int unpack_board_row(int packed_value)
 }
 
 
-static ushort[] edge = new ushort[65536];
-static ushort[,] flipt = new ushort[6561, 8];
+ushort[] edge = new ushort[65536];
+ushort[,] flipt = new ushort[6561, 8];
 
-static void build_tables()
+void build_tables()
 {
+  for (int i = 0; i < 32; i++) {
+    stacks[i] = new Stack();
+  }
+
+  for (int i =0; i < 2; i++) {
+    slist[i] = new scored_move_list();
+  }
+
   Console.WriteLine("Building general lookup tables");
   build_lookups();
 
@@ -316,10 +441,10 @@ static void build_tables()
   Console.WriteLine("Computation complete");
 }
 
-static readonly bool BLACK = false;
-static readonly bool WHITE = true;
+readonly bool BLACK = false;
+readonly bool WHITE = true;
 
-static int edge_recursive(ushort row)
+int edge_recursive(ushort row)
 {
   if (edge[row] != 0) {
     // already computed
@@ -404,8 +529,6 @@ static int edge_recursive(ushort row)
   return edge[row];
 }
 
-
-
 // The loose row representation is 8 bits for black 8 bits for white
 // but because any given cell can only have 3 actual states, black-white-empty
 // the total number of valid rows is only 3^8 which is 6561.  This is much smaller
@@ -419,7 +542,7 @@ static int edge_recursive(ushort row)
 // but that basically doesn't happen.  So unpack only exists for this test code.
 // You could quickly visit all 6561 rows and get their loose mappings saving you
 // lots of loop iterations. But at this point we don't have that mapping anyway.
-static void build_pack_table()
+void build_pack_table()
 {
   // we loop through all 64k combos but we're going to prune away the invalid ones
   for (int row = 0; row < 65536; row++) {
@@ -451,9 +574,7 @@ static void build_pack_table()
   }
 }
 
-// #define DATA(mask, x) ((mask) & (1 << (x)))
-
-static ushort fe(ushort row, bool is_white, int x, int dx)
+ushort fe(ushort row, bool is_white, int x, int dx)
 {
   int i, him, me, x0;
 
@@ -498,7 +619,7 @@ done:
   return (ushort)((me << 8) | him);
 }
 
-static void flip(ref BOARD board, bool is_white, int x, int y)
+void flip(ref BOARD board, bool is_white, int x, int y)
 {
   HBOARD me = board.half(is_white);
   HBOARD him = board.half(!is_white);
@@ -528,18 +649,18 @@ static void flip(ref BOARD board, bool is_white, int x, int y)
     putdiag2(ref me, ref him, x, y, new_row);
 }
 
-static ushort gethorz(HBOARD me, HBOARD him, int y)
+ushort gethorz(HBOARD me, HBOARD him, int y)
 {
   return (ushort)((me.get(y) << 8) | him.get(y));
 }
 
-static void puthorz(ref HBOARD me, ref HBOARD him, int y, ushort row)
+void puthorz(ref HBOARD me, ref HBOARD him, int y, ushort row)
 {
   me.put(y, (byte)(row >> 8));
   him.put(y, (byte)(row & 0xff));
 }
 
-static ushort getvert(HBOARD me, HBOARD him, int x, int y)
+ushort getvert(HBOARD me, HBOARD him, int x, int y)
 {
   ushort row = 0;
   for (int i = 0; i < 8; i++) {
@@ -550,7 +671,7 @@ static ushort getvert(HBOARD me, HBOARD him, int x, int y)
   return row;
 }
 
-static void putvert(ref HBOARD me, ref HBOARD him, int x, ushort row)
+void putvert(ref HBOARD me, ref HBOARD him, int x, ushort row)
 {
   byte hi = (byte)(row >> 8);
   byte mask = 1;
@@ -573,7 +694,7 @@ static void putvert(ref HBOARD me, ref HBOARD him, int x, ushort row)
   }
 }
 
-static ushort getdiag1(HBOARD me, HBOARD him, int x, int y)
+ushort getdiag1(HBOARD me, HBOARD him, int x, int y)
 {
   int i, d;
 
@@ -590,7 +711,7 @@ static ushort getdiag1(HBOARD me, HBOARD him, int x, int y)
   return row;
 }
 
-static void putdiag1(ref HBOARD me, ref HBOARD him, int x, int y, int row)
+void putdiag1(ref HBOARD me, ref HBOARD him, int x, int y, int row)
 {
   int d = y - x;
   byte hi = (byte)(row >> 8);
@@ -616,7 +737,7 @@ static void putdiag1(ref HBOARD me, ref HBOARD him, int x, int y, int row)
   }
 }
 
-static ushort getdiag2(HBOARD me, HBOARD him, int x, int y)
+ushort getdiag2(HBOARD me, HBOARD him, int x, int y)
 {
   int d = y + x;
 
@@ -631,7 +752,7 @@ static ushort getdiag2(HBOARD me, HBOARD him, int x, int y)
   return row;
 }
 
-static void putdiag2(ref HBOARD me, ref HBOARD him, int x, int y, ushort row)
+void putdiag2(ref HBOARD me, ref HBOARD him, int x, int y, ushort row)
 {
   int d = y + x;
   byte hi = (byte)(row >> 8);
@@ -656,58 +777,58 @@ static void putdiag2(ref HBOARD me, ref HBOARD him, int x, int y, ushort row)
   }
 }
 
+bool test_mode = false;
+bool player_is_white = false;
 
+static void Main(string[] args) 
+{
+  (new Othello()).Begin(args);
 }
 
-/*
-
-
-static int test_mode = 0;
-
-int main(int argc, char **argv)
+public void Begin(string[] args) 
 {
-  int i, j;
-  int player, play_side;
-  FILE *f;
+  display(initial);
+  display_one_row(0x1824);
+  Console.WriteLine();
+  build_tables();
+  Console.WriteLine();
 
-  player = 0;
-  play_side = 0;
-  if (argc >= 2) {
-    switch (argv[1][0]) {
+  bool player = false;
+  bool player_is_white = false;
+  if (args.Length >= 2) {
+    switch (args[1][0]) {
 
     case 'w':
     case 'W':
-      player = 1;
-      printf("You will be playing white.\n");
-      play_side = 1;
+      player = true;
+      Console.WriteLine("You will be playing white.");
+      player_is_white = true;
       break;
 
     case 'b':
     case 'B':
-      player = 1;
-      printf("You will be playing black.\n");
-      play_side = 0;
+      player = true;
+      Console.WriteLine("You will be playing black.\n");
+      player_is_white = false;
       break;
     }
 
-    switch (argv[1][1]) {
+    switch (args[1][1]) {
     case 'l':
     case 'L':
-      if (argc < 3) {
-        fprintf(stderr, "wrath: You must specify a file name\n");
-        exit(1);
+      if (args.Length < 3) {
+        Console.WriteLine("wrath: You must specify a file name");
+        Environment.Exit(1);
       }
-      load (argv[2], initial);
+      initial = load(args[2]);
 
-      if (argv[1][2] == 't' | argv[1][2] == 'T') {
+      if (args[1][2] == 't' || args[1][2] == 'T') {
          // do one move and stop
-         test_mode = 1;
+         test_mode = true;
       }
+      break;
     }
   }
-
-  // make the lookup tables
-  build_tables();
 
   // start with no passes
   consecutive_passes = 0;
@@ -716,177 +837,228 @@ int main(int argc, char **argv)
   display(initial);
   display_score(initial);
 
+  is_white_turn = true;
+
   // repeat play until there are two passes, alternating color
   while (consecutive_passes < 2) {
-    if (player && color == play_side)
-      user_input(initial, color);
+    if (player && is_white_turn == player_is_white)
+      user_input(initial, is_white_turn);
     else
-      computer_input(initial, color);
+      computer_input(initial, is_white_turn);
 
     display_score(initial);
-    color = !color;
+    is_white_turn = !is_white_turn;
 
     if (test_mode) {
-      printf("test complete\n");
-      exit(0);
+      Console.WriteLine("test complete\n");
+      Environment.Exit(0);
     }
   }
 }
-#include "board.h"
 
-void safe_gets(char *buf, int len)
+bool save()
 {
-  char *result = fgets(buf, len, stdin);
-  if (result) {
-    // clobber the trailing \n
-    buf[strlen(buf) - 1] = 0;
-  } else {
-    buf[0] = 0;
+  Console.Write("filename (press return to abort): ");
+  string? name = Console.ReadLine();
+  if (name == null) {
+    return true;
   }
-}
 
-int save()
-{
-  char name[80];
-
-  printf("filename (press return to abort): ");
-  fflush(stdout);
-  safe_gets(name, sizeof(name));
-  if (!name[0])
-    return (1);
-
-  FILE *f = fopen(name, "w");
-  if (!f)
-    return (1);
+  var sw = new StreamWriter(name);
 
   for (int y = 0; y < 8; y++) {
     for (int x = 0; x < 8; x++) {
-      putc(ascii_values[TYPE(initial, x, y)], f);
-      putc(' ', f);
+      sw.Write(ascii_values[TYPE(initial, x, y)]);
+      sw.Write(' ');
     }
-    fputc('\n', f);
+    sw.Write('\n');
   }
-  putc('\n', f);
-  fprintf(f, "%c to play\n", color ? 'w' : 'b');
-  fclose(f);
-  return 0;
+  sw.Write('\n');
+  char player = is_white_turn ? 'w' : 'b';
+  sw.WriteLine("{0} to play", player);
+  return false;
 }
 
-// once used as the ^C handler
-static void catch ()
+BOARD load(string name)
 {
-  char confirm[100];
+  var sr = new StreamReader(name);
 
-  printf("\nreally quit (y/n)? ");
-  fflush(stdout);
-  safe_gets(confirm, sizeof(confirm));
-  if (confirm[0] != 'y')
-    return;
+  var board = new BOARD();
 
-  printf("save game (y/n)? ");
-  fflush(stdout);
-  safe_gets(confirm, sizeof(confirm));
-  if (!confirm[0])
-    return;
+  for (int i = 0; i < 8; i++) {
 
-  if (confirm[0] == 'y' && save())
-    return;
+    for (int j = 0; i < 8; ) {
+      int b = sr.Read();
+      if (b == -1) {
+        Console.WriteLine("wrath: Unable to parse input board");
+        Environment.Exit(1);
+      }
 
-  exit(0);
+      if (char.IsWhiteSpace((char)b)) continue;
+
+      switch (b) {
+
+      case 'B':
+      case 'b':
+        board.put(false, i, (byte)(board.get(false, i) | (1 << j)));
+        break;
+
+      case 'W':
+      case 'w':
+        board.put(true, i, (byte)(board.get(true, i) | (1 << j)));
+        break;
+
+      case '-':
+        break;
+
+      default:
+        Console.WriteLine("wrath: Board has invalid characters");
+        Environment.Exit(1);
+        break;
+      }
+    }
+  }
+
+  for (;;) {
+    int b = sr.Read();
+    if (b == -1) {
+      Console.WriteLine("wrath: Unable to parse input board");
+      Environment.Exit(1);
+    }
+
+    if (char.IsWhiteSpace((char)b)) continue;
+
+    switch (b) {
+    case 'w':
+    case 'W':
+      is_white_turn = true;
+      break;
+
+    case 'b':
+    case 'B':
+      is_white_turn = false;
+      break;
+
+    default:
+      Console.WriteLine("wrath: I can't tell whose turn is next");
+      Environment.Exit(1);
+      break;
+    }
+
+    Console.WriteLine("Picking up where we left off... {} to play",
+          is_white_turn ? "White" : "Black");
+    break;
+  }
+
+  return board;
+} 
+
+// This is for keeping valid moves
+
+struct Xy {
+  public byte x;
+  public byte y;
+
+  public void SetXY(byte _x, byte _y) { x = _x;  y = _y; }
 }
 
-int score(BOARD board, int color)
+// We keep moves we are considering here, this is for holding the next set of valid moves
+class Stack {
+  public byte top;
+  public Xy[] moves;
+
+  public Stack() { moves = new Xy[32]; }
+}
+
+// these are all the stacks we will ever need, no malloc
+Stack[] stacks = new Stack[32];
+
+void reset_move_stack(int lvl)
+{  
+  stacks[lvl].top = 0;
+}
+
+// each next valid mmove at this recursion level is pushed on its own stack
+void push(byte x, byte y, int lvl) {
+  // this % business is here to avoid array bounds checks
+  // there can't be more than 32 moves and there can't be more than 32 ply searches
+  // as it is 20 ply takes minutes and 21 ply would take an hour... 32 ply is not
+  // happening in our universe.  By comparison in 1987 we could do 12 ply at end game.
+  // So it's grown to 20 in like 36 years.
+  Stack S = stacks[lvl % 32];
+  int top = S.top % 32;
+  S.moves[top].SetXY(x,y);
+  S.top++;
+}
+
+// and they come off... the order is arbitrary anyway and stack is cheap
+// so we do that
+bool pop_move(out byte x, out byte y, byte lvl)
 {
-  int i, s;
-  unsigned int t;
-  unsigned char *me, *him;
-
-  me = &board[color][0];
-  him = &board[!color][0];
-
-  t = s = 0;
-  if (turn > ENDGAME) {
-    for (i = 0; i < 8; i++)
-      s += bit_count[me[i]];
-    return (s);
+  Stack S = stacks[lvl % 32];
+  if (S.top > 0) {
+    S.top--;
+    int top = S.top % 32;
+    x = S.moves[top].x;
+    y = S.moves[top].y;
+    return true;
   }
 
-  for (i = 2; i < 6; i++)
-    s += weighted_row_value[me[i]];
-  s -= bit_count[me[1] & 0x7e] + bit_count[me[6] & 0x7e] +
-       ((bit_count[me[1] & 0x42] + bit_count[me[6] & 0x42]) << 2);
-
-  for (i = 0; i < 8; i++)
-    t = (t << 1) | (!!(me[i] & (1 << 7)));
-  for (i = 0; i < 8; i++)
-    t = (t << 1) | (!!(him[i] & (1 << 7)));
-
-  s += edge[t];
-
-  t = 0;
-  for (i = 0; i < 8; i++)
-    t = (t << 1) | (me[i] & 1);
-  for (i = 0; i < 8; i++)
-    t = (t << 1) | (him[i] & 1);
-
-  s += edge[t] + edge[(me[0] << 8) | him[0]] + edge[(me[7] << 8) | him[7]];
-
-  return (s);
+  x = y = 0xff;
+  return false;
 }
 
-#define HORRIBLE -32000
-#define GREAT 32000
 
-static int boards;
-static double total_time;
-static int searching_to_end;
-static int bx, by, bs;
-static int limit;
-static int IRQ;
+const int HORRIBLE = -32000;
+const int  GREAT = 32000;
+
+int boards;
+double total_time;
+bool searching_to_end = false;
+byte bx;
+byte by;
+int  bs;
+int limit;
+bool IRQ;
 
 
-static void print_with_commas(int n) {
-  if (n < 1000) {
-    printf ("%d", n);
-  }
-  else {
-    print_with_commas(n / 1000);
-    printf(",%03d", n % 1000);
-  }
-}
-
-static void print_duration(double duration) {
+void print_duration(double duration) {
   int seconds = (int)duration;
   int minutes = seconds/60;
-  int millis = (duration - seconds) * 1000;
+  int millis = (int)((duration - seconds) * 1000);
   seconds %= 60;
-  printf("%d:%02d.%03d", minutes, seconds, millis);
+  Console.Write("{0}:{1:D2}.{2:D3}", minutes, seconds, millis);
 }
 
-static Timer timer;
+Timer? timer;
 
-static void alarm(int timeoutInSeconds) {
-  if (timeOutInSeconds == 0) {
-    timer.Dispose();
-    timer = null;
+void alarm(int timeoutInSeconds) {
+  if (timeoutInSeconds == 0) {
+    if (timer != null) {
+      timer.Dispose();
+      timer = null;
+    }
   }
 
   timer = new Timer((state) =>
   {
       // This code will be executed when the timer elapses
       Console.WriteLine("Timeout occurred!");
-      IRQ = 1;
-      timer.Dispose(); // Dispose of the timer
+      IRQ = true;
+      if (timer != null) {
+        timer.Dispose(); // Dispose of the timer
+        timer = null;
+      }
   }, null, timeoutInSeconds * 1000, Timeout.Infinite);
 }
 
-int search(BOARD board, int color, int *bestx, int *besty)
+int search(BOARD board, bool is_white, out byte bestx, out byte besty)
 {
-  int i, start, lvl, moves;
+  int lvl;
+  byte start;
+  bool found_anything;
 
-  signal(SIGALRM, timeout);
-
-  if (turn < 15)
+   if (turn < 15)
     limit = 2;
   else if (turn < 30)
     limit = 4;
@@ -894,188 +1066,328 @@ int search(BOARD board, int color, int *bestx, int *besty)
     limit = 10;
 
   boards = 0;
-  searching_to_end = 0;
-  IRQ = 0;
+  searching_to_end = false;
+  IRQ = false;
 
-  clock_t start_time = clock();
+   Stopwatch stopwatch = new Stopwatch();
+
   if (turn <= ENDGAME) {
     alarm(limit);
     start = 2;
   } else {
-    printf("Seeking to end of board\n");
-    start = 64 - turn;
-    if (start % 2)
+    Console.WriteLine("Seeking to end of board\n");
+    start = (byte)(64 - turn);
+    if (start % 2 != 0) {
       start++;
-  }
-
-  if (setjmp(env)) {
-    *bestx = bx;
-    *besty = by;
-    clock_t end_time = clock();
-    double duration = (end_time - start_time + 0.0)/CLOCKS_PER_SEC;
-
-    if (duration == 0.0) {
-      duration = 0.000001;
     }
-    total_time += duration;
-
-    printf("\nEvaluated ");
-    print_with_commas(boards);
-    printf(" boards in ");
-    print_duration(duration);
-    printf(" (");
-    print_with_commas((int)(boards / duration));
-    printf(" boards/sec).  Total time used: ");
-    print_duration(total_time);
-    printf("\n");
-    fflush(stdout);
-
-    return bs;
   }
 
-  if (!(moves = valid(board, color, start))) {
-    bx = -1;
-    by = -1;
-    bs = HORRIBLE;
-    goto no_moves;
+  try {
+    found_anything = valid(board, is_white, start);
+    if (!found_anything) {
+      bx = 0xff;
+      by = 0xff;
+      bs = HORRIBLE;
+      goto no_moves;
+    }
+
+    reset_scored_moves(0);
+    while (pop_move(out bestx, out besty, start)) {
+      insert_scored_move(bestx, besty, 0, 0);
+    }
+
+    lvl = 0;
+    for (byte i = start; i < 65; i += 2) {
+      Console.Write("{0:2}: ", i);
+      rsearch(board, is_white, i, lvl);
+      if (i + 2 > 64 - turn)
+        break;
+      lvl = 1 - lvl; // alternate between 0 and 1
+    }
+
+    no_moves:
+    alarm(0);
+  }
+  catch (TimeoutException) {
+    alarm(0);
   }
 
-  reset_scored_moves(0);
-  while (pop_move(bestx, besty, start)) {
-    insert_scored_move(*bestx, *besty, 0, 0);
+  bestx = bx;
+  besty = by;
+  stopwatch.Stop();
+
+  double duration = stopwatch.ElapsedMilliseconds / 1000.0;
+
+  if (duration == 0.0) {
+    duration = 0.001;
   }
+  total_time += duration;
 
-  lvl = 0;
-  for (i = start; i < 65; i += 2) {
-    printf("%2d: ", i);
-    fflush(stdout);
-    rsearch(board, color, i, lvl);
-    if (i + 2 > 64 - turn)
-      break;
-    lvl = !lvl;
-  }
+  Console.Write("\nEvaluated {0:N0} boards in ", boards);
+  print_duration(duration);
+  Console.Write("{0:N0} boards/sec  Total time used: ", (int)(boards/duration));
+  print_duration(total_time);
+  Console.WriteLine("");
 
-no_moves:
-  alarm(0);
-  throw new TimeoutException("Operation timed out.");
-}
-
-static int rsearch(BOARD board, int color, int depth, int lvl)
-{
-  int x, y, sc;
-  BOARD brd;
-  int moves;
-
-  reset_scored_moves(!lvl);
-  moves = 0;
-  searching_to_end = 0;
-
-  if (!remove_scored_move(&x, &y, lvl))
-    return 0;
-
-  printf("%c%c=", x + 'a', '8' - y);
-  fflush(stdout);
-  bcpy(brd, board);
-  flip(brd, color, x, y);
-
-  bs = mini(brd, !color, depth - 1, HORRIBLE, GREAT);
-  bx = x;
-  by = y;
-  printf("%d  ", bs - ((turn > ENDGAME) ? 0 : SCORE_BIAS));
-  fflush(stdout);
-  insert_scored_move(x, y, bs, !lvl);
-
-  while (remove_scored_move(&x, &y, lvl)) {
-    printf("%c%c", x + 'a', '8' - y);
-    fflush(stdout);
-    bcpy(brd, board);
-    flip(brd, color, x, y);
-    sc = mini(brd, !color, depth - 1, bs, GREAT);
-    insert_scored_move(x, y, sc, !lvl);
-    if (sc > bs) {
-      putchar('=');
-      bx = x;
-      by = y;
-      bs = sc;
-    } else
-      putchar('<');
-
-    printf("%d  ", sc - ((turn > ENDGAME) ? 0 : SCORE_BIAS));
-    fflush(stdout);
-  }
-  printf("\n");
-  fflush(stdout);
   return bs;
 }
 
-static int mini(BOARD board, int color, int depth, int a, int b)
-{
-  if (IRQ)
-    throw new TimeoutException("Operation timed out.");
-  boards++;
-  if (!depth)
-    return score(board, color);
-  else {
-    BOARD brd;
-    int x, y, sc, yes;
 
+int score(BOARD board, bool is_white)
+{
+  HBOARD me = board.half(is_white);
+  HBOARD him = board.half(!is_white);
+
+  int s = 0;
+
+  if (turn > ENDGAME) {
+    for (int j = 0; j < 8; j++) {
+      s += bit_count[me.get(j)];
+    }
+    return s;
+  }
+
+  int i;
+  for (i = 2; i < 6; i++) {
+    s += weighted_row_value[me.get(i)];
+  }
+
+  s -= bit_count[me.get(1) & 0x7e] + bit_count[me.get(6) & 0x7e] +
+       ((bit_count[me.get(1) & 0x42] + bit_count[me.get(6) & 0x42]) << 2);
+
+  int t = 0;
+  for (i = 0; i < 8; i++)
+    t = (t << 1) | (1 & (me.get(i) >> 7));
+
+  for (i = 0; i < 8; i++) {
+    t = (t << 1) | (1 & (him.get(i) >> 7));
+  }
+
+  s += edge[t];
+
+  t = 0;
+  for (i = 0; i < 8; i++)
+    t = (t << 1) | (me.get(i) & 1);
+  for (i = 0; i < 8; i++)
+    t = (t << 1) | (him.get(i) & 1);
+
+  s += edge[t] + edge[(me.get(0) << 8) | him.get(0)] + edge[(me.get(7) << 8) | him.get(7)];
+
+  return s;
+}
+
+int rsearch(BOARD board, bool is_white, byte depth, int lvl)
+{
+  int sc;
+  byte x;
+  byte y; 
+
+  reset_scored_moves(1 - lvl);
+  searching_to_end = false;
+
+  if (!remove_scored_move(out x, out y, lvl)) {
+    return 0;
+  }
+
+  Console.Write("{0}{1}=", (char)(x + 'a'), (char)('8' - y));
+  var brd = new BOARD(board);
+  flip(ref brd, is_white, x, y);
+
+  bs = mini(brd, !is_white, (byte)(depth - 1), HORRIBLE, GREAT);
+  bx = x;
+  by = y;
+  Console.Write("{0}  ", bs - ((turn > ENDGAME) ? 0 : SCORE_BIAS));
+
+  insert_scored_move(x, y, bs, 1-lvl);
+
+  while (remove_scored_move(out x, out y, lvl)) {
+    Console.Write("{0}{1}", (char)(x + 'a'), (char)('8' - y));
+    brd = new BOARD(board);
+    flip(ref brd, is_white, x, y);
+    sc = mini(brd, !is_white, (byte)(depth - 1), bs, GREAT);
+    insert_scored_move(x, y, sc, 1-lvl);
+    if (sc > bs) {
+      Console.Write('=');
+      bx = x;
+      by = y;
+      bs = sc;
+    } else {
+      Console.Write('<');
+    }
+
+    Console.Write("{0}  ", sc - ((turn > ENDGAME) ? 0 : SCORE_BIAS));
+  }
+  Console.WriteLine("");
+  return bs;
+}
+
+// This is keeping sorted scores, there are two sets of scores
+
+struct scored_move {
+  public int score;
+  public byte x;
+  public byte y;
+};
+
+// note that this list is small, like if there are 10 valid scored_moves that's a lot
+// the size is 64 because that's how many squares there are on the board
+// and that's still small but it we can't really have 64 valid scored_moves
+class scored_move_list {
+  public byte _put; // the number we put in 
+  public byte _get; // the one to get next
+  public scored_move[] scored_moves;
+};
+
+scored_move_list[] slist = new scored_move_list[2];
+
+// reset the count of scored_moves in this level
+// lvl is 0/1 corresponding to the current recursion level, it alternates
+// so we're reading off of lvl and writing onto !lvl at any moment
+void reset_scored_moves(int lvl)
+{
+  scored_move_list S = slist[lvl];
+  S._get = S._put = 0;
+  if (S.scored_moves == null) {
+    S.scored_moves = new scored_move[32];
+  }
+}
+
+void insert_scored_move(byte x, byte y, int score, int lvl)
+{
+  int i, j;
+  var S = slist[lvl];
+  var moves = S.scored_moves;
+
+  // find the place to insert this scored_move
+  // stop at the first place where this score is bigger
+  // (i.e. the best ends up at the front)
+  for (i = 0; i < S._put; i++)
+    if (score > moves[i].score)
+      break;
+
+  for (j = S._put; j > i; j--) {
+    moves[j] = moves[j-1];
+  }
+
+  moves[i].x = x;
+  moves[i].y = y;
+  moves[i].score = score;
+  S._put++;
+}
+
+bool remove_scored_move(out byte x, out byte y, int lvl)
+{
+  var S = slist[lvl];
+
+  if (S._get >= S._put) {
+    x = y = 0xff;
+    return false;
+  }
+
+  var moves = S.scored_moves;
+
+  x = moves[S._get].x;
+  y = moves[S._get].y;
+  S._get++;
+
+  return true;
+}
+
+
+// minimax search with alpha beta pruning
+int mini(BOARD board, bool is_white, byte depth, int a, int b)
+{
+  if (IRQ) {
+    throw new TimeoutException("Operation timed out.");
+  }
+  boards++;
+  if (depth == 0) {
+    return score(board, is_white);
+  }
+  else {
+    int sc;
     reset_move_stack(depth);
 
-    yes = valid(board, color, depth);
-    if (!yes) {
+    bool found_anything = valid(board, is_white, depth);
+    if (!found_anything) {
       if (turn > ENDGAME && !searching_to_end) {
-        searching_to_end = 1;
-        sc = maxi(board, !color, depth + 1, a, b);
+        searching_to_end = true;
+        sc = maxi(board, !is_white, (byte)(depth + 1), a, b);
       } else
-        sc = maxi(board, !color, depth - 1, a, b);
+        sc = maxi(board, !is_white, (byte)(depth - 1), a, b);
       return sc;
     }
-    searching_to_end = 0;
+    searching_to_end = false;
 
-    while (pop_move(&x, &y, depth)) {
-      bcpy(brd, board);
-      flip(brd, color, x, y);
-      sc = maxi(brd, !color, depth - 1, a, b);
+    byte x;
+    byte y;
+    while (pop_move(out x, out y, depth)) {
+      var brd = new BOARD(board);
+      flip(ref brd, is_white, x, y);
+      sc = maxi(brd, !is_white, (byte)(depth - 1), a, b);
+
+      // in this pass we're minning the maxes
       if (sc < b) {
+        // so this says we found a new min
         b = sc;
-        if (b <= a)
+
+        // if this happens then that means this min will
+        // be even worse than a previous known min
+        // from the max pass above us
+        // that means the max pass will not use this
+        // score for sure it's too low so just stop
+        // computing, we can prune here.
+        if (b <= a) {
           return b;
+        }
       }
     }
     return b;
   }
 }
 
-static int maxi(BOARD board, int color, int depth, int a, int b)
+int maxi(BOARD board, bool is_white, byte depth, int a, int b)
 {
   if (IRQ)
     throw new TimeoutException("Operation timed out.");
   boards++;
-  if (!depth)
-    return score(board, color);
+  if (depth == 0) {
+    return score(board, is_white);
+  }
   else {
-    BOARD brd;
-    int x, y, sc, yes;
-
+    int sc;
     reset_move_stack(depth);
-
-    yes = valid(board, color, depth);
-    if (!yes) {
+  
+    bool found_anything = valid(board, is_white, depth);
+    if (!found_anything) {
       if (turn > ENDGAME && !searching_to_end) {
-        searching_to_end = 1;
-        sc = mini(board, !color, depth + 1, a, b);
-      } else
-        sc = mini(board, !color, depth - 1, a, b);
+        searching_to_end = true;
+        sc = mini(board, !is_white, (byte)(depth + 1), a, b);
+      } else {
+        sc = mini(board, !is_white, (byte)(depth - 1), a, b);
+      }
       return sc;
     }
-    searching_to_end = 0;
+    searching_to_end = false;
 
-    while (pop_move(&x, &y, depth)) {
-      bcpy(brd, board);
-      flip(brd, color, x, y);
-      sc = mini(brd, !color, depth - 1, a, b);
+    byte x;
+    byte y;
+    while (pop_move(out x, out y, depth)) {
+      var brd = new BOARD(board);
+      flip(ref brd, is_white, x, y);
+      sc = mini(brd, !is_white, (byte)(depth - 1), a, b);
+
+      // in this pass we're maxxing the mins
       if (sc > a) {
+        // so this says we found a new max
         a = sc;
+
+        // if this happens then that means this max will
+        // be even better than a previous known max
+        // from the min pass above us
+        // that means the min pass will not use this
+        // score for sure it's too high so just stop
+        // computing, we can prune here.
         if (a >= b)
           return a;
       }
@@ -1084,293 +1396,29 @@ static int maxi(BOARD board, int color, int depth, int a, int b)
   }
 }
 
-static void bcpy(BOARD b1, BOARD b2)
-{
-  memcpy(b1, b2, sizeof(BOARD));
-}
-
-void move(BOARD board, int color, int x, int y)
-{
-  board[color][y] |= (1 << x);
-  flip(board, color, x, y);
-  display(board);
-}
-
-static void show(int depth, int score) {
-  int i;
-
-  for (i = 0; i < depth; i++)
-    putchar('\t');
-
-  printf("%d\n", score);
-  fflush(stdout);
-}
-#include "board.h"
-
-// This is keeping sorted scores, there are two sets of scores
-
-typedef struct {
-  int score;
-  char x;
-  char y;
-} scored_move;
-
-  // note that this list is small, like if there are 10 valid scored_moves that's a lot
-  // the size is 64 because that's how many squares there are on the board
-  // and that's still small but it we can't really have 64 valid scored_moves
-typedef struct {
-  char put; // the number we put in 
-  char get; // the one to get next
-  scored_move scored_moves[64];
-} scored_move_list;
-
-static scored_move_list slist[2];
-
-// reset the count of scored_moves in this level
-// lvl is 0/1 corresponding to the current recursion level, it alternates
-// so we're reading off of lvl and writing onto !lvl at any moment
-void reset_scored_moves(int lvl)
-{
-  scored_move_list *S = &slist[lvl];
-  S->get = S->put = 0;
-}
-
-void insert_scored_move(int x, int y, int score, int lvl)
-{
-  int i, j;
-  scored_move_list *S = &slist[lvl];
-
-  // find the place to insert this scored_move
-  // stop at the first place where this score is bigger
-  // (i.e. the best ends up at the front)
-  for (i = 0; i < S->put; i++)
-    if (score > S->scored_moves[i].score)
-      break;
-
-  if (i < S->put) {
-    // bulk scored_move the scored_moves above this one to make room for the new scored_move
-    memmove(&S->scored_moves[i+1], &S->scored_moves[i], sizeof(scored_move)*(S->put - i));
-  }
-
-  scored_move m = { .x = x, .y = y, .score = score };
-
-  S->scored_moves[i] = m;
-  S->put++;
-}
-
-int remove_scored_move(int *x, int *y, int lvl)
-{
-  scored_move_list *S = &slist[lvl];
-
-  if (S->get >= S->put) {
-    *x = *y = -1;
-    return 0;
-  }
-  
-  *x = S->scored_moves[S->get].x;
-  *y = S->scored_moves[S->get].y;
-  S->get++;
-
-  return 1;
-}
-#include "board.h"
-
-// This is for keeping valid moves
-
-typedef struct {
-  char x;
-  char y;
-} xy;
-
-// We keep moves we are considering here, this is for holding the next set of valid moves
-typedef struct {
-  char top;
-  xy moves[64];
-} stack;
-
-// these are all the stacks we will ever need, no malloc
-static stack stacks[64];
-
-void reset_move_stack(int lvl)
-{
-  stack *S = &stacks[lvl];
-  S->top = 0;
-}
-
-// each next valid mmove at this recursion level is pushed on its own stack
-void push(int x, int y, int lvl) {
-  stack *S = &stacks[lvl];
-  S->moves[S->top].x = x;
-  S->moves[S->top].y = y;
-  S->top++;
-}
-
-// and they come off... the order is arbitrary anyway and stack is cheap
-// so we do that
-int pop_move(int *x, int *y, int lvl)
-{
-  stack *S = &stacks[lvl];
-  if (S->top) {
-    S->top--;
-    *x = S->moves[S->top].x;
-    *y = S->moves[S->top].y;
-    return 1;
-  }
-
-  *x = *y = -1;
-  return 0;
-}
-#include "board.h"
-
-#include "board.h"
-
-#define INITIAL_DEPTH 0
-
-// here we ask the user what they want to do.
-int user_input(BOARD board, int color)
-{
-again:;
-  // user input x and y
-  int user_x = -1;
-  int user_y = -1;
-  int user_pass = 0;
-
-  reset_move_stack(INITIAL_DEPTH);
-
-  // recompute the valid moves and put them on the stack
-  // they go on stack number INITIAL_DEPTH (i.e. the root)
-  valid(board, color, INITIAL_DEPTH);
-
-  printf("Please enter a move --> ");
-  fflush(stdout);
-
-  char s[80];
-  safe_gets(s, sizeof(s));
-
-  int len = strlen(s);
-
-  user_pass = 0;
-
-  for (int i = 0; i < len; i++) {
-    if (s[i] == '?') {
-      // help
-      printf("\n");
-      printf("?\t\t\t\t:display this help page\n");
-      printf("[a-z][1-8]\t\t\t:enter a move\n");
-      printf("p\t\t\t\t:pass this turn\n");
-      printf("r\t\t\t\t:redraw the board\n");
-      printf("s\t\t\t\t:save current game\n");
-      printf("q\t\t\t\t:quit current game\n");
-      printf("\n");
-      fflush(stdout);
-      goto again;
-    }
-    if (s[i] >= 'a' && s[i] <= 'h') {
-      // column
-      user_x = s[i] - 'a';
-    }
-    if (s[i] >= '1' && s[i] <= '8') {
-      // row
-      user_y = '8' - s[i];
-    }
-    if (s[i] == 'p') {
-      // pass
-      user_pass = 1;
-    }
-    if (s[i] == 'q') {
-      // quit
-      exit(0);
-    }
-    if (s[i] == 'r') {
-      // redraw the display
-      display(board);
-      display_score(board);
-      goto again;
-    }
-    if (s[i] == 's') {
-      if (save()) {
-        goto again;
-      }
-      else {
-        exit(0);
-      }
-    }
-  }
-
-  if ((user_x == -1 || user_y == -1) && user_pass == 0) {
-    printf("?syntax error\n");
-    fflush(stdout);
-    goto again;
-  }
-
-  if (user_pass == 1) {
-    // make sure there are no moves
-    int x, y;
-    if (pop_move(&x, &y, INITIAL_DEPTH)) {
-      printf("You can't pass unless you have no moves\n");
-      fflush(stdout);
-      goto again;
-    }
-    consecutive_passes++;
-    printf("Pass accepted.\n");
-    fflush(stdout);
-    return 0;
-  }
-
-  // make sure that the entered move is a valid move
-  int x, y;
-  while (pop_move(&x, &y, INITIAL_DEPTH)) {
-    if (x == user_x && y == user_y) {
-      printf("Move to %c%c accepted.\n", x + 'a', '8' - y);
-      fflush(stdout);
-      move(board, color, x, y);
-      consecutive_passes = 0;
-      return 0;
-    }
-  }
-  printf("You can't move to %c%c.\n", user_x + 'a', '8' - user_y);
-  fflush(stdout);
-  goto again;
-}
-#include "board.h"
-
-#define tobyte(x) ((unsigned char)(x))
-#define load_state(a, b, c) ((tobyte(a) << 16) | (tobyte(b) << 8) | tobyte(c))
-
 // the current depth just tell us which stack to put the valid moves on
 // the stacks are all pre-allocated so there is no malloc
-int valid(BOARD board, int color, int current_depth)
+bool valid(BOARD board, bool is_white, byte current_depth)
 {
-  // we put the board in a sea of zeros so we can go off either
-  // end with impunity
-
-  uint64_t words[5];
-
-  words[0] = 0;
-  words[1] = *(uint64_t *)&board[color][0];
-  words[2] = 0;
-  words[3] = *(uint64_t *)&board[!color][0];
-  words[4] = 0;
-
-  uint8_t *me  = (uint8_t*)(&words[0]);
-  uint8_t *him = (uint8_t*)(&words[2]);
-
   reset_move_stack(current_depth);
-  int found_anything = 0;
+  bool found_anything = false;
 
-  for (int y = 0; y < 8; y++) {
-    unsigned row = (me[8+y] << 8) | him[8+y];
-    unsigned char used = (row | (row >> 8));
+  HBOARD me = board.half(is_white);
+  HBOARD him = board.half(!is_white);
+
+  for (byte y = 0; y < 8; y++) {
+    ushort row = (ushort)((me.get(y) << 8) | him.get(y));
+    byte used = (byte)(row | (row >> 8));
 
     // already full on this row, nothing to do
     if (used == 0xff)
       continue;
 
-    unsigned initial_used = used;
-    unsigned mask = 1;
-    for (int i = 0; i < 8; i++, mask <<= 1) {
+    byte initial_used = used;
+    byte mask = 1;
+    for (byte i = 0; i < 8; i++, mask <<= 1) {
       // if the current spot is occupied, skip it, no valid move here
-      if (initial_used & mask)
+      if ((initial_used & mask) != 0)
         continue;
 
       // flipt[base_3_row_index][i] tells you what the state is of the
@@ -1379,10 +1427,11 @@ int valid(BOARD board, int color, int current_depth)
       // piece at column i appears, then nothing flips, so it's not valid.
       // remember me is in the high bits and him is in the low bits
       // so we place onto the high bits.  And d1 has the current bit mask
-      if ((row | (mask << 8)) != flipt[pack_table[row]][i]) {
+
+      if ((row | (mask << 8)) != flipt[pack_table[row], i]) {
         push(i, y, current_depth);
         used |= mask;
-        found_anything = 1;
+        found_anything = true;
       }
     }
 
@@ -1464,51 +1513,55 @@ int valid(BOARD board, int color, int current_depth)
     // I'm writing this comment 36 years after I wrote this code
     // and I'm stunned that it worked out on the first go...
 
-    uint64_t y0 = 0;
-    uint64_t y1 = load_state(used, used, used);
-    y1 |= y1 << 32;
 
-    for (int i = 1; i < 8; i++) {
-      int index = 8 + y;
-      int up = index + i;   // we can go off the end
-      int down = index - i;
+    // all used bits start in state 2 -> no match found
+    // we never leave state 2 (see above)
+    uint y0 = 0;
+    uint y1 = (uint)(used | (used << 8) | (used << 16));
 
-      uint64_t up_d0, up_d1, down_d0, down_d1, d;
+    for (int i = y - 1; i >= 0; i--) {
+      byte h = him.get(i);
+      byte m = me.get(i);
+      uint d0 = (uint)(((byte)(h >> (y-i)) << 16) | ((byte)(h << (y-i)) << 8) | h);
+      uint d1 = (uint)(((byte)(m >> (y-i)) << 16) | ((byte)(m << (y-i)) << 8) | m);
 
-      d = him[up];     up_d0 = load_state(d >> i, d << i, d);
-      d = me[up];      up_d1 = load_state(d >> i, d << i, d);
-      d = him[down]; down_d0 = load_state(d >> i, d << i, d);
-      d = me[down];  down_d1 = load_state(d >> i, d << i, d);
-
-      uint64_t d0 = (up_d0 << 32) | down_d0;
-      uint64_t d1 = (up_d1 << 32) | down_d1;
-
-      // state machine logic see above
-      y0 = ((~y1) & d0) | (y0 & (y1 | d1));
-      y1 |= d1 | (~d0);
-
-      // when y1 is set the computation is finished either way, if they are all finished
-      // then we can bail out.
-      if ((~y1) == 0)
-        break;
+      y0 = (~y1 & d0)  | (y0 & (y1|d1));
+      y1 |= d1 | ~d0;
+      if (0 == ~y1) break;
     }
-    // read out: state 3 is valid move
     y0 &= y1;
-    y0 |= y0 >> 32;
-    y0 |= y0 >> 16;
     y0 |= y0 >> 8;
-    row = y0 & 0xff;
+    y0 |= y0 >> 8;
+    byte found = (byte)y0;
+    byte used2 = (byte)(used | found);
 
-    // bit_values has one bit number in each nibble
-    // this saves us from looking for all 8 bits
-    // when often there is only 1 bit set
-    if (row) {
-      uint64_t bits = bit_values[row];
-      while (bits) {
-        int x = (int)(bits & 0x7);
-        bits >>= 4;
-        push(x, y, current_depth);
-        found_anything = 1;
+    y1 = (uint)(used2 | (used2 << 8) | (used2 << 16));
+    y0 = 0;
+    for (int i = y + 1;i < 8; i++) {
+      byte h = him.get(i);
+      byte m = me.get(i);
+      uint d0 = (uint)(((byte)(h >> (i-y)) << 16) | ((byte)(h << (i-y)) << 8) | h);
+      uint d1 = (uint)(((byte)(m >> (i-y)) << 16) | ((byte)(m << (i-y)) << 8) | m);
+
+      y0 = (~y1 & d0)  | (y0 & (y1|d1));
+      y1 |= d1 | ~d0;
+      if (0 == ~y1) break;
+    }
+
+    y0 &= y1;
+    y0 |= y0 >> 8;
+    y0 |= y0 >> 8;
+    found |= (byte)y0;
+    found &= (byte)~used;
+
+    if (found != 0) {
+      mask = 1;
+      for (byte i = 0; i < 8; i++, mask <<= 1) {
+        if ((found & mask) != 0) {
+          push(i, y, current_depth);
+          found_anything = true;
+          found &= (byte)~mask;
+        }
       }
     }
   }
@@ -1516,92 +1569,7 @@ int valid(BOARD board, int color, int current_depth)
   return found_anything;
 }
 
-static void safe_fgets(char *s, int len, FILE *f) {
-  char *result = fgets(s, len, f);
-  if (!result) {
-    Console.WriteLine("wrath: Unable to parse input board");
-    exit(1);
-  }
 }
 
-void load(const char *name, BOARD board)
-{
-  int i, j, n;
-  char c[8];
-  char s[80];
 
-  FILE *f = fopen(name, "r");
-  if (!f) {
-    fprintf(stderr, "wrath: I can't open this file: '%s'\n", name);
-    fflush(stderr);
-    exit(1);
-  }
 
-  board = new BOARD();
-
-  for (i = 0; i < 8; i++) {
-    safe_fgets(s, sizeof(s), f);
-    
-    n = sscanf(s, " %c %c %c %c %c %c %c %c ", 
-      &c[0], &c[1], &c[2], &c[3],
-      &c[4], &c[5], &c[6], &c[7]);
-    if (n != 8) {
-      fprintf(stderr, "wrath: Unable to parse input board\n");
-      fflush(stderr);
-      exit(1);
-    }
-
-    for (j = 0; j < 8; j++)
-      switch (c[j]) {
-
-      case 'B':
-      case 'b':
-        board.put(false, i) = board.get(false, i) | (1 << j);
-        break;
-
-      case 'W':
-      case 'w':
-        board.put(true, i) = board.get(true, i) | (1 << j);
-        break;
-
-      case '-':
-        break;
-
-      default:
-        fprintf(stderr, "wrath: Board has invalid characters\n");
-        fflush(stderr);
-        exit(1);
-      }
-  }
-
-  safe_fgets(s, sizeof(s), f);
-  safe_fgets(s, sizeof(s), f);
-  n = sscanf(s, " %c to play", c);
-  if (n != 1) {
-    fprintf(stderr, "wrath: Unable to parse input board\n");
-    fflush(stderr);
-    exit(1);
-  }
-  switch (c[0]) {
-  case 'w':
-  case 'W':
-    color = 1;
-    break;
-  case 'b':
-  case 'B':
-    color = 0;
-    break;
-
-  default:
-    fprintf(stderr, "wrath: I can't tell whose turn is next\n");
-    fflush(stderr);
-    exit(1);
-  }
-
-  printf("Picking up where we left off... %s to play\n",
-         color ? "White" : "Black");
-}
-#include "board.h"
-
-}
-*/
