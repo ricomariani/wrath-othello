@@ -76,14 +76,14 @@ struct HBOARD {
 int turn = 0;
 int consecutive_passes = 0;
 bool is_white_turn = true;
-readonly int ENDGAME = 44;
+readonly int ENDGAME = 46;
 readonly int SCORE_BIAS = 8187;
 
 // the computer provides "input" for the next move
 // it's done uniformly like this so that the logic for
 // player vs. computer is basically the same as computer
 // vs. itself.
-void computer_input(BOARD board, bool is_white)
+void computer_input(ref BOARD board, bool is_white)
 {
   byte x, y;
   int score = search(board, is_white, out x, out y);
@@ -95,7 +95,7 @@ void computer_input(BOARD board, bool is_white)
     // at the endgame the score is the number of pieces we have
     int score_bias = turn > ENDGAME ? 0 : SCORE_BIAS;
     Console.WriteLine("best move for {0} is at {1}{2} (score {3})", is_white ? 'W' : 'B',
-           x + 'a', '8' - y, score - score_bias);
+           (char)(x + 'a'), (char)('8' - y), score - score_bias);
 
     move(ref board, is_white, x, y);
     consecutive_passes = 0;
@@ -105,7 +105,7 @@ void computer_input(BOARD board, bool is_white)
 readonly byte INITIAL_DEPTH = 0;
 
 // here we ask the user what they want to do.
-bool user_input(BOARD board, bool  is_white)
+bool user_input(ref BOARD board, bool  is_white)
 {
 again:;
   // user input x and y
@@ -778,7 +778,6 @@ void putdiag2(ref HBOARD me, ref HBOARD him, int x, int y, ushort row)
 }
 
 bool test_mode = false;
-bool player_is_white = false;
 
 static void Main(string[] args) 
 {
@@ -787,16 +786,13 @@ static void Main(string[] args)
 
 public void Begin(string[] args) 
 {
-  display(initial);
-  display_one_row(0x1824);
-  Console.WriteLine();
   build_tables();
-  Console.WriteLine();
 
   bool player = false;
   bool player_is_white = false;
-  if (args.Length >= 2) {
-    switch (args[1][0]) {
+  if (args.Length > 1) {
+    var arg1 = args[1];
+    switch (arg1[0]) {
 
     case 'w':
     case 'W':
@@ -813,16 +809,16 @@ public void Begin(string[] args)
       break;
     }
 
-    switch (args[1][1]) {
+    if (arg1.Length >= 2) switch (arg1[1]) {
     case 'l':
     case 'L':
-      if (args.Length < 3) {
+      if (args.Length < 2) {
         Console.WriteLine("wrath: You must specify a file name");
         Environment.Exit(1);
       }
       initial = load(args[2]);
 
-      if (args[1][2] == 't' || args[1][2] == 'T') {
+      if (arg1.Length >= 3 && (arg1[2] == 't' || arg1[2] == 'T')) {
          // do one move and stop
          test_mode = true;
       }
@@ -842,9 +838,9 @@ public void Begin(string[] args)
   // repeat play until there are two passes, alternating color
   while (consecutive_passes < 2) {
     if (player && is_white_turn == player_is_white)
-      user_input(initial, is_white_turn);
+      user_input(ref initial, is_white_turn);
     else
-      computer_input(initial, is_white_turn);
+      computer_input(ref initial, is_white_turn);
 
     display_score(initial);
     is_white_turn = !is_white_turn;
@@ -887,7 +883,7 @@ BOARD load(string name)
 
   for (int i = 0; i < 8; i++) {
 
-    for (int j = 0; i < 8; ) {
+    for (int j = 0; j < 8; ) {
       int b = sr.Read();
       if (b == -1) {
         Console.WriteLine("wrath: Unable to parse input board");
@@ -916,6 +912,8 @@ BOARD load(string name)
         Environment.Exit(1);
         break;
       }
+
+      j++;
     }
   }
 
@@ -945,7 +943,7 @@ BOARD load(string name)
       break;
     }
 
-    Console.WriteLine("Picking up where we left off... {} to play",
+    Console.WriteLine("Picking up where we left off... {0} to play",
           is_white_turn ? "White" : "Black");
     break;
   }
@@ -978,7 +976,7 @@ void reset_move_stack(int lvl)
   stacks[lvl].top = 0;
 }
 
-// each next valid mmove at this recursion level is pushed on its own stack
+// each next valid move at this recursion level is pushed on its own stack
 void push(byte x, byte y, int lvl) {
   // this % business is here to avoid array bounds checks
   // there can't be more than 32 moves and there can't be more than 32 ply searches
@@ -1018,7 +1016,6 @@ bool searching_to_end = false;
 byte bx;
 byte by;
 int  bs;
-int limit;
 bool IRQ;
 
 
@@ -1043,7 +1040,7 @@ void alarm(int timeoutInSeconds) {
   timer = new Timer((state) =>
   {
       // This code will be executed when the timer elapses
-      Console.WriteLine("Timeout occurred!");
+      // Console.WriteLine("Timeout occurred!");
       IRQ = true;
       if (timer != null) {
         timer.Dispose(); // Dispose of the timer
@@ -1057,8 +1054,9 @@ int search(BOARD board, bool is_white, out byte bestx, out byte besty)
   int lvl;
   byte start;
   bool found_anything;
+  int limit;
 
-   if (turn < 15)
+  if (turn < 15)
     limit = 2;
   else if (turn < 30)
     limit = 4;
@@ -1068,8 +1066,6 @@ int search(BOARD board, bool is_white, out byte bestx, out byte besty)
   boards = 0;
   searching_to_end = false;
   IRQ = false;
-
-   Stopwatch stopwatch = new Stopwatch();
 
   if (turn <= ENDGAME) {
     alarm(limit);
@@ -1081,6 +1077,9 @@ int search(BOARD board, bool is_white, out byte bestx, out byte besty)
       start++;
     }
   }
+
+  Stopwatch stopwatch = new Stopwatch();
+  stopwatch.Start();
 
   try {
     found_anything = valid(board, is_white, start);
@@ -1098,7 +1097,7 @@ int search(BOARD board, bool is_white, out byte bestx, out byte besty)
 
     lvl = 0;
     for (byte i = start; i < 65; i += 2) {
-      Console.Write("{0:2}: ", i);
+      Console.Write("{0,2:D}: ", i);
       rsearch(board, is_white, i, lvl);
       if (i + 2 > 64 - turn)
         break;
@@ -1117,15 +1116,11 @@ int search(BOARD board, bool is_white, out byte bestx, out byte besty)
   stopwatch.Stop();
 
   double duration = stopwatch.ElapsedMilliseconds / 1000.0;
-
-  if (duration == 0.0) {
-    duration = 0.001;
-  }
   total_time += duration;
 
   Console.Write("\nEvaluated {0:N0} boards in ", boards);
   print_duration(duration);
-  Console.Write("{0:N0} boards/sec  Total time used: ", (int)(boards/duration));
+  Console.Write(" {0:N0} boards/sec  Total time used: ", (int)(boards/duration));
   print_duration(total_time);
   Console.WriteLine("");
 
@@ -1236,6 +1231,8 @@ class scored_move_list {
   public byte _put; // the number we put in 
   public byte _get; // the one to get next
   public scored_move[] scored_moves;
+
+  public scored_move_list() { scored_moves = new scored_move[32]; }
 };
 
 scored_move_list[] slist = new scored_move_list[2];
@@ -1247,9 +1244,6 @@ void reset_scored_moves(int lvl)
 {
   scored_move_list S = slist[lvl];
   S._get = S._put = 0;
-  if (S.scored_moves == null) {
-    S.scored_moves = new scored_move[32];
-  }
 }
 
 void insert_scored_move(byte x, byte y, int score, int lvl)
