@@ -8,6 +8,32 @@ using Microsoft.Win32.SafeHandles;
 
 class Othello {
 
+ushort[] edge = new ushort[65536];
+ushort[,] flipt = new ushort[6561, 8];
+int turn = 0;
+int consecutive_passes = 0;
+bool is_white_turn = true;
+readonly int ENDGAME = 44;
+readonly int SCORE_BIAS = 8187;
+readonly byte INITIAL_DEPTH = 0;
+readonly bool BLACK = false;
+readonly bool WHITE = true;
+
+byte[] bit_count = new byte[256];
+byte[] weighted_row_value = new byte[256];
+ulong[] bit_values = new ulong[256];
+
+// The black and white occupied slots of a board row
+// are represented by two bytes in a short. But there
+// are only 3 combinations, none, black, and white.
+// This means you can represent a given board row as
+// a base three number.  pack_table[i] is the pre-computed
+// number representing the row as computed by pack_board_row.
+// So literally pack_table[mask] == pack_board_row(mask)
+// for all valid masks.  We skip any that have both black
+// and white set.
+ushort[] pack_table = new ushort[65536];
+
 public class TimeoutException : Exception
 {
     public TimeoutException(string message) : base(message)
@@ -81,11 +107,6 @@ struct HBOARD {
   }
 }
 
-int turn = 0;
-int consecutive_passes = 0;
-bool is_white_turn = true;
-readonly int ENDGAME = 44;
-readonly int SCORE_BIAS = 8187;
 
 // the computer provides "input" for the next move
 // it's done uniformly like this so that the logic for
@@ -109,8 +130,6 @@ void computer_input(ref BOARD board, bool is_white)
     consecutive_passes = 0;
   }
 }
-
-readonly byte INITIAL_DEPTH = 0;
 
 // here we ask the user what they want to do.
 bool user_input(ref BOARD board, bool  is_white)
@@ -358,22 +377,6 @@ void build_lookups()
   }
 }
 
-byte[] bit_count = new byte[256];
-byte[] weighted_row_value = new byte[256];
-ulong[] bit_values = new ulong[256];
-
-
-// The black and white occupied slots of a board row
-// are represented by two bytes of a short. But there
-// are only 3 combinations, none, black, and white.
-// This means you can represent a given board row as
-// a base three number.  pack_table[i] is the pre-computed
-// number representing the row as computed by pack_board_row.
-// So literally pack_table[mask] == pack_board_row(mask)
-// for all valid masks.  We skip any that have both black
-// and white set.
-ushort[] pack_table = new ushort[65536];
-
 int pack_board_row(int board_row)
 {
   int s = 0;
@@ -417,10 +420,6 @@ int unpack_board_row(int packed_value)
   return board_row;
 }
 
-
-ushort[] edge = new ushort[65536];
-ushort[,] flipt = new ushort[6561, 8];
-
 void build_tables()
 {
   for (int i = 0; i < 32; i++) {
@@ -448,9 +447,6 @@ void build_tables()
 
   Console.WriteLine("Computation complete");
 }
-
-readonly bool BLACK = false;
-readonly bool WHITE = true;
 
 int edge_recursive(ushort row)
 {
@@ -1327,8 +1323,9 @@ int mini(BOARD board, bool is_white, byte depth, int a, int b)
       if (turn > ENDGAME && !searching_to_end) {
         searching_to_end = true;
         sc = maxi(board, !is_white, (byte)(depth + 1), a, b);
-      } else
+      } else {
         sc = maxi(board, !is_white, (byte)(depth - 1), a, b);
+      }
       return sc;
     }
     searching_to_end = false;
@@ -1568,14 +1565,16 @@ bool valid(BOARD board, bool is_white, byte current_depth)
     found |= (byte)y0;
     found &= (byte)~used;
 
+    // bit_values has one bit number in each nibble
+    // this saves us from looking for all 8 bits
+    // when often there is only 1 bit set
     if (found != 0) {
-      mask = 1;
-      for (byte i = 0; i < 8; i++, mask <<= 1) {
-        if ((found & mask) != 0) {
-          push(i, y, current_depth);
-          found_anything = true;
-          found &= (byte)~mask;
-        }
+      ulong bits = bit_values[found];
+      while (bits != 0) {
+        byte x = (byte)(bits & 0x7);
+        bits >>= 4;
+        push(x, y, current_depth);
+        found_anything = true;
       }
     }
   }

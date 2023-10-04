@@ -17,6 +17,16 @@ int main(int argc, char **argv)
   int player, play_side;
   FILE *f;
 
+  // LOL, it was 30 seconds on a slice of a VAX780 :D
+  printf("Give me about thirty seconds to build up my tables please\n");
+  fflush(stdout);
+
+  // make the lookup tables
+  build_tables();
+
+  // start with no passes
+  consecutive_passes = 0;
+
   player = 0;
   play_side = 0;
   if (argc >= 2) {
@@ -55,16 +65,6 @@ int main(int argc, char **argv)
       }
     }
   }
-
-  // LOL, it was 30 seconds on a slice of a VAX780 :D
-  printf("Give me about thirty seconds to build up my tables please\n");
-  fflush(stdout);
-
-  // make the lookup tables
-  build_tables();
-
-  // start with no passes
-  consecutive_passes = 0;
 
   // display the initial board and score
   display(initial);

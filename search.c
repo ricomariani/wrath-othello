@@ -186,8 +186,9 @@ static int mini(BOARD board, int colour, int depth, int a, int b)
       if (turn > ENDGAME && !searching_to_end) {
         searching_to_end = 1;
         sc = maxi(board, !colour, depth + 1, a, b);
-      } else
+      } else {
         sc = maxi(board, !colour, depth - 1, a, b);
+      }
       return sc;
     }
     searching_to_end = 0;
@@ -196,12 +197,23 @@ static int mini(BOARD board, int colour, int depth, int a, int b)
       bcpy(brd, board);
       flip(brd, colour, x, y);
       sc = maxi(brd, !colour, depth - 1, a, b);
+      // in this pass we're minning the maxes
       if (sc < b) {
+        // so this says we found a new min
         b = sc;
-        if (b <= a)
+
+        // if this happens then that means this min will
+        // be even worse than a previous known min
+        // from the max pass above us
+        // that means the max pass will not use this
+        // score for sure it's too low so just stop
+        // computing, we can prune here.
+        if (b <= a) {
           return b;
+        }
       }
     }
+    
     return b;
   }
 }
@@ -224,8 +236,9 @@ static int maxi(BOARD board, int colour, int depth, int a, int b)
       if (turn > ENDGAME && !searching_to_end) {
         searching_to_end = 1;
         sc = mini(board, !colour, depth + 1, a, b);
-      } else
+      } else {
         sc = mini(board, !colour, depth - 1, a, b);
+      }
       return sc;
     }
     searching_to_end = 0;
@@ -234,8 +247,17 @@ static int maxi(BOARD board, int colour, int depth, int a, int b)
       bcpy(brd, board);
       flip(brd, colour, x, y);
       sc = mini(brd, !colour, depth - 1, a, b);
+      // in this pass we're maxxing the mins
       if (sc > a) {
+        // so this says we found a new max
         a = sc;
+
+        // if this happens then that means this max will
+        // be even better than a previous known max
+        // from the min pass above us
+        // that means the min pass will not use this
+        // score for sure it's too high so just stop
+        // computing, we can prune here.
         if (a >= b)
           return a;
       }
