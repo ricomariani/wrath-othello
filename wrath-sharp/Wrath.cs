@@ -5,6 +5,9 @@ using System.Reflection;
 using System.Reflection.Metadata;
 using System.Runtime.Intrinsics;
 using Microsoft.Win32.SafeHandles;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+
 
 class Othello {
 
@@ -967,6 +970,7 @@ BOARD load(string name)
 } 
 
 // This is for keeping valid moves
+#if (NO_INLINE_ARRAY)
 
 struct Xy {
   public byte x;
@@ -1020,6 +1024,59 @@ bool pop_move(out byte x, out byte y, byte lvl)
   x = y = 0xff;
   return false;
 }
+
+#else
+
+[InlineArray(32)]
+private struct Xy {
+  public ushort _0;
+}
+
+// We keep moves we are considering here, this is for holding the next set of valid moves
+class Stack {
+  public byte top;
+  public Xy xy;
+}
+
+// these are all the stacks we will ever need, no malloc
+Stack[] stacks = new Stack[32];
+
+void reset_move_stack(int lvl)
+{  
+  stacks[lvl].top = 0;
+}
+
+// each next valid move at this recursion level is pushed on its own stack
+void push(byte x, byte y, int lvl) {
+  // this % business is here to avoid array bounds checks
+  // there can't be more than 32 moves and there can't be more than 32 ply searches
+  // as it is 20 ply takes minutes and 21 ply would take an hour... 32 ply is not
+  // happening in our universe.  By comparison in 1987 we could do 12 ply at end game.
+  // So it's grown to 20 in like 36 years.
+  Stack S = stacks[lvl];
+  int top = S.top % 32;
+  S.xy[top] = (ushort)(x<<8 | y);
+  S.top++;
+}
+
+// and they come off... the order is arbitrary anyway and stack is cheap
+// so we do that
+bool pop_move(out byte x, out byte y, byte lvl)
+{
+  Stack S = stacks[lvl % 32];
+  if (S.top > 0) {
+    S.top--;
+    int top = S.top % 32;
+    ushort xy = S.xy[top];
+    x = (byte)(xy >> 8);
+    y = (byte)(xy);
+    return true;
+  }
+
+  x = y = 0xff;
+  return false;
+}
+#endif
 
 
 const int HORRIBLE = -32000;
