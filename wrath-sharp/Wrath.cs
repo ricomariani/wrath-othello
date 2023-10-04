@@ -45,6 +45,10 @@ struct BOARD {
   public HBOARD half(bool is_white) {
     return new HBOARD(data.GetElement(is_white ? 1 : 0));
   }
+
+  public BOARD(HBOARD lo, HBOARD hi) {
+    data = Vector128.Create(lo.getUlong()).WithElement(1, hi.getUlong());
+  }
 }
 
 // this is one player, half the board.  We keep the same data type for easy copying
@@ -64,6 +68,10 @@ struct HBOARD {
     data = Vector128<ulong>.Zero.WithElement(0, x).AsByte();
   }
 
+  public ulong getUlong() {
+    return data.AsUInt64().GetElement(0);
+  }
+
   public byte get(int i) {
     return data.GetElement(i);
   }
@@ -76,7 +84,7 @@ struct HBOARD {
 int turn = 0;
 int consecutive_passes = 0;
 bool is_white_turn = true;
-readonly int ENDGAME = 46;
+readonly int ENDGAME = 44;
 readonly int SCORE_BIAS = 8187;
 
 // the computer provides "input" for the next move
@@ -647,6 +655,13 @@ void flip(ref BOARD board, bool is_white, int x, int y)
   row |= (ushort)(256 << x);
   if (new_row != row)
     putdiag2(ref me, ref him, x, y, new_row);
+
+  if (is_white) {
+    board = new BOARD(him, me);
+  }
+  else {
+    board = new BOARD(me, him);
+  }
 }
 
 ushort gethorz(HBOARD me, HBOARD him, int y)
@@ -663,9 +678,10 @@ void puthorz(ref HBOARD me, ref HBOARD him, int y, ushort row)
 ushort getvert(HBOARD me, HBOARD him, int x, int y)
 {
   ushort row = 0;
-  for (int i = 0; i < 8; i++) {
-    row |= (ushort)((((me.get(i) & (1 << x))) != 0 ? 1 : 0) << (i + 8));
-    row |= (ushort)((((him.get(i) & (1 << x))) != 0 ? 1 : 0) << i);
+  ushort mask = (ushort)(1 << x);
+  for (int i = 0; i < 8; i++) {    
+    row |= (ushort)(((( me.get(i) & mask)) != 0 ? 1 : 0) << (i + 8));
+    row |= (ushort)((((him.get(i) & mask)) != 0 ? 1 : 0) << i);
   }
   row &= (ushort)~(1 << (y + 8));
   return row;
@@ -702,10 +718,10 @@ ushort getdiag1(HBOARD me, HBOARD him, int x, int y)
 
   ushort row = 0;
   for (i = 0; i < 8; i++) {
-    if ((i + d) < 0 || (i + d) > 7)
+    if (i + d < 0 || i + d > 7)
       continue;
 
-    row |= (ushort)(((me.get(i + d) & (1 << i)) != 0 ? 1 : 0) << (i + 8) | ((him.get(i + d) & (1 << i)) != 0 ? 1 : 0) << i);
+    row |= (ushort)(((me.get(i + d) >> i) & 1) << (i + 8) | ((him.get(i + d) >> i) & 1) << i);
   }
   row &= (ushort)~(1 << (x + 8));
   return row;
@@ -746,7 +762,7 @@ ushort getdiag2(HBOARD me, HBOARD him, int x, int y)
     if ((d - i) < 0 || (d - i) > 7)
       continue;
 
-    row |= (ushort)(((me.get(d - i) & (1 << i)) != 0 ? 1 : 0) << (i + 8) | ((him.get(d - i) & (1 << i)) != 0 ? 1 : 0) << i);
+    row |= (ushort)(((me.get(d - i) >> i) & 1) << (i + 8) | ((him.get(d - i) >> i) & 1) << i);
   }
   row &= (ushort)~(1 << (x + 8));
   return row;
@@ -790,8 +806,9 @@ public void Begin(string[] args)
 
   bool player = false;
   bool player_is_white = false;
-  if (args.Length > 1) {
-    var arg1 = args[1];
+
+  if (args.Length > 0) {
+    var arg1 = args[0];
     switch (arg1[0]) {
 
     case 'w':
@@ -809,14 +826,16 @@ public void Begin(string[] args)
       break;
     }
 
-    if (arg1.Length >= 2) switch (arg1[1]) {
+    if (arg1.Length >= 2) 
+    switch (arg1[1]) {
     case 'l':
     case 'L':
       if (args.Length < 2) {
         Console.WriteLine("wrath: You must specify a file name");
         Environment.Exit(1);
       }
-      initial = load(args[2]);
+      // also sets is_white_turn
+      initial = load(args[1]);
 
       if (arg1.Length >= 3 && (arg1[2] == 't' || arg1[2] == 'T')) {
          // do one move and stop
@@ -833,7 +852,6 @@ public void Begin(string[] args)
   display(initial);
   display_score(initial);
 
-  is_white_turn = true;
 
   // repeat play until there are two passes, alternating color
   while (consecutive_passes < 2) {
@@ -1035,6 +1053,7 @@ void alarm(int timeoutInSeconds) {
       timer.Dispose();
       timer = null;
     }
+    return;
   }
 
   timer = new Timer((state) =>
