@@ -15,12 +15,12 @@ ushort[] edge = new ushort[65536];
 ushort[,] flipt = new ushort[6561, 8];
 int turn = 0;
 int consecutive_passes = 0;
-bool is_white_turn = true;
+byte is_white_turn = 1;
 readonly int ENDGAME = 44;
 readonly int SCORE_BIAS = 8187;
 readonly byte INITIAL_DEPTH = 0;
-readonly bool BLACK = false;
-readonly bool WHITE = true;
+readonly byte BLACK = 0;
+readonly byte WHITE = 1;
 
 byte[] bit_count = new byte[256];
 byte[] weighted_row_value = new byte[256];
@@ -65,56 +65,21 @@ struct x2<T> {
 }
 
 struct BOARD {
-  public x8<byte> w;
-  public x8<byte> b;
-
-  public BOARD(BOARD copy) {
-    w = copy.w;
-    b = copy.b;
-  }
+  public x2<x8<byte>> data;
 
   public BOARD() {
   }
 
-  public byte get(bool is_white, int j) {
-    return is_white ? w[j&7] : b[j&7];
+  public byte get(byte is_white, int j) {
+    return data[is_white & 1][j&7];
   }
 
-  public void put(bool is_white, int j, byte val) {
-    if (is_white)
-      w[j&7] = val;
-    else
-      b[j&7] = val;
+  public void put(byte is_white, int j, byte val) {
+    data[is_white & 1][j&7] = val;
   }
 
-  public HBOARD half(bool is_white) {
-    return is_white ? new HBOARD(w) : new HBOARD(b);
-  }
-
-  public BOARD(HBOARD _b, HBOARD _w) {
-    b = _b.data;
-    w = _w.data;
-  }
-}
-
-// this is one player, half the board.  We keep the same data type for easy copying
-// to get the HBOARD we extract the top or bottom half
-struct HBOARD {
-  public x8<byte> data;
-
-  public HBOARD() {
-  }
-
-  public HBOARD(x8<byte> d) {
-    data = d;
-  }
-
-  public byte get(int i) {
-    return data[i];
-  }
-
-  public void put(int i, byte b) {
-    data[i] = b;
+  public x8<byte> half(byte is_white) {
+    return data[is_white & 1];
   }
 }
 
@@ -123,18 +88,18 @@ struct HBOARD {
 // it's done uniformly like this so that the logic for
 // player vs. computer is basically the same as computer
 // vs. itself.
-void computer_input(ref BOARD board, bool is_white)
+void computer_input(ref BOARD board, byte is_white)
 {
   byte x, y;
   int score = search(board, is_white, out x, out y);
 
   if (x == 0xff) {
-    Console.WriteLine("{0} has to pass.", is_white ? 'W' : 'B');
+    Console.WriteLine("{0} has to pass.", is_white != 0 ? 'W' : 'B');
     consecutive_passes++;
   } else {
     // at the endgame the score is the number of pieces we have
     int score_bias = turn > ENDGAME ? 0 : SCORE_BIAS;
-    Console.WriteLine("best move for {0} is at {1}{2} (score {3})", is_white ? 'W' : 'B',
+    Console.WriteLine("best move for {0} is at {1}{2} (score {3})", is_white != 0 ? 'W' : 'B',
            (char)(x + 'a'), (char)('8' - y), score - score_bias);
 
     move(ref board, is_white, x, y);
@@ -143,7 +108,7 @@ void computer_input(ref BOARD board, bool is_white)
 }
 
 // here we ask the user what they want to do.
-bool user_input(ref BOARD board, bool  is_white)
+bool user_input(ref BOARD board, byte is_white)
 {
 again:;
   // user input x and y
@@ -246,7 +211,7 @@ again:;
 }
 
 
-void move(ref BOARD board, bool is_white, int x, int y)
+void move(ref BOARD board, byte is_white, int x, int y)
 {
   board.put(is_white, y, (byte)(board.get(is_white, y) | (1<<x)));
   flip(ref board, is_white, x, y);
@@ -265,32 +230,19 @@ void show(int depth, int score)
 
 string ascii_values = "-BW?";
 
-// This is true or false if the bit is set in the row for one color
-int RINDEX(int rowbits, int x) {
-  return (rowbits & (1 << x)) != 0 ? 1 : 0;
-}
-
-// this get the row out of the given board (black or white) and then is true
-// if that board has a bit at x, y
-int INDEX(HBOARD hb, int x, int y) {
-  byte b = hb.get(y);
-  return (b & (1 << x)) != 0 ? 1 : 0;
-}
-
 // this gets the type of the row board[0] is black and board[1] is white
-int TYPE(BOARD board, int x, int y) {
-  byte b1 = board.half(false).get(y);
-  byte mask = (byte)(1 << x);
-  int i1 = (b1 & mask) != 0 ? 1 : 0;
-  byte b2 = board.half(true).get(y);
-  int i2 = (b2 & mask) != 0 ? 2 : 0;
-  return i1 + i2;
+// this is used only for display
+char BoardCharAt(BOARD board, int x, int y) {
+  int i1 = (board.get(0, y) >> x) & 1;
+  int i2 = (board.get(1, y) >> x) & 1;
+  return ascii_values[i1 + (i2 << 1)];
 }
 
 // here row has a single row, black is the high bits and white is the low bits
 // the values are 0 empty, 1 black and 2 white just like the ascii table above
-int RTYPE(int row, int x) {
-   return ((row >> (8 + x)) & 1) + 2 * ((row >> x) & 1);
+// this is used only for display
+char RowCharAt(int row, int x) {
+   return ascii_values[((row >> (8 + x)) & 1) + 2 * ((row >> x) & 1)];
 }
 
 // draw all the rows of the board
@@ -304,7 +256,7 @@ void display(BOARD board)
 
     // board data
     for (x = 0; x < 8; x++) {
-      Console.Write(ascii_values[TYPE(board, x, y)]);
+      Console.Write(BoardCharAt(board, x, y));
       Console.Write(' ');
     }
     Console.Write('\n');
@@ -318,11 +270,11 @@ void display(BOARD board)
   Console.Write('\n');
 }
 
-BOARD initial = new BOARD();
+BOARD initial;
 
 void display_one_row(int rowbits) {
   for (int x = 0; x < 8; x++) {
-    Console.Write(ascii_values[RTYPE(rowbits, x)]);
+    Console.Write(RowCharAt(rowbits, x));
   }
 }
 
@@ -335,14 +287,14 @@ void display_score(BOARD board)
 
   sc1 = 0;
   for (i = 0; i < 8; i++) {
-    sc1 += bit_count[board.half(true).get(i)];
+    sc1 += bit_count[board.get(1, i)];
   }
 
   Console.Write("\t\t\t\t\t\t    Score: W{0} ", sc1);
 
   sc2 = 0;
   for (i = 0; i < 8; i++) {
-    sc2 += bit_count[board.half(false).get(i)];
+    sc2 += bit_count[board.get(0, i)];
   }
 
   Console.Write("B={0}\n", sc2);
@@ -578,7 +530,7 @@ void build_pack_table()
   }
 }
 
-ushort fe(ushort row, bool is_white, int x, int dx)
+ushort fe(ushort row, byte is_white, int x, int dx)
 {
   int i, him, me, x0;
 
@@ -586,7 +538,7 @@ ushort fe(ushort row, bool is_white, int x, int dx)
   me = row >> 8;
   x0 = x;
 
-  if (is_white) {
+  if (is_white != 0) {
     i = him;
     him = me;
     me = i;
@@ -615,7 +567,7 @@ ushort fe(ushort row, bool is_white, int x, int dx)
 
 done:
   me |= (1 << x0);
-  if (is_white) {
+  if (is_white != 0) {
     i = him;
     him = me;
     me = i;
@@ -623,90 +575,87 @@ done:
   return (ushort)((me << 8) | him);
 }
 
-void flip(ref BOARD board, bool is_white, int x, int y)
+void flip(ref BOARD board, byte is_white, int x, int y)
 {
-  HBOARD me = board.half(is_white);
-  HBOARD him = board.half(!is_white);
+    byte other = (byte)(1-is_white);
+    flip2(ref board.data[is_white], ref board.data[other], x, y);
+}
 
-  ushort row = (ushort)(gethorz(me, him, y) & (~(256 << x)));
+void flip2(ref x8<byte> me, ref x8<byte> him, int x, int y)
+{
+  ushort row = (ushort)(gethorz(ref me, ref him, y) & (~(256 << x)));
 
   ushort new_row = flipt[pack_table[row], x];
   puthorz(ref me, ref him, y, new_row);
 
-  row = getvert(me, him, x, y);
+  row = getvert(ref me, ref him, x, y);
   new_row = flipt[pack_table[row], y];
   row |= (ushort)(256 << y);
   if (new_row != row) {
     putvert(ref me, ref him, x, new_row);
   }
 
-  row = getdiag1(me, him, x, y);
+  row = getdiag1(ref me, ref him, x, y);
   new_row = flipt[pack_table[row], x];
   row |= (ushort)(256 << x);
   if (new_row != row)
     putdiag1(ref me, ref him, x, y, new_row);
 
-  row = getdiag2(me, him, x, y);
+  row = getdiag2(ref me, ref him, x, y);
   new_row = flipt[pack_table[row], x];
   row |= (ushort)(256 << x);
   if (new_row != row)
     putdiag2(ref me, ref him, x, y, new_row);
 
-  if (is_white) {
-    board = new BOARD(him, me);
-  }
-  else {
-    board = new BOARD(me, him);
-  }
 }
 
-ushort gethorz(HBOARD me, HBOARD him, int y)
+ushort gethorz(ref x8<byte> me, ref x8<byte> him, int y)
 {
-  return (ushort)((me.get(y) << 8) | him.get(y));
+  return (ushort)((me[y] << 8) | him[y]);
 }
 
-void puthorz(ref HBOARD me, ref HBOARD him, int y, ushort row)
+void puthorz(ref x8<byte> me, ref x8<byte> him, int y, ushort row)
 {
-  me.put(y, (byte)(row >> 8));
-  him.put(y, (byte)(row & 0xff));
+  me[y] = (byte)(row >> 8);
+  him[y] = (byte)(row & 0xff);
 }
 
-ushort getvert(HBOARD me, HBOARD him, int x, int y)
+ushort getvert(ref x8<byte> me, ref x8<byte> him, int x, int y)
 {
   ushort row = 0;
   ushort mask = (ushort)(1 << x);
   for (int i = 0; i < 8; i++) {
-    row |= (ushort)(((( me.get(i) & mask)) != 0 ? 1 : 0) << (i + 8));
-    row |= (ushort)((((him.get(i) & mask)) != 0 ? 1 : 0) << i);
+    row |= (ushort)(((( me[i] & mask)) != 0 ? 1 : 0) << (i + 8));
+    row |= (ushort)((((him[i] & mask)) != 0 ? 1 : 0) << i);
   }
   row &= (ushort)~(1 << (y + 8));
   return row;
 }
 
-void putvert(ref HBOARD me, ref HBOARD him, int x, ushort row)
+void putvert(ref x8<byte> me, ref x8<byte> him, int x, ushort row)
 {
   byte hi = (byte)(row >> 8);
   byte mask = 1;
   byte mx = (byte)((1 << x));
 
   for (int i = 0; i < 8; i++, mask <<= 1) {
-    byte b = me.get(i);
+    byte b = me[i];
     if ((hi & mask) != 0)
       b |= mx;
     else
       b &= (byte)~mx;
-    me.put(i, b);
+    me[i] = b;
 
-    b = him.get(i);
+    b = him[i];
     if ((row & mask) != 0)
       b |= mx;
     else
       b &= (byte)~mx;
-    him.put(i, b);
+    him[i] = b;
   }
 }
 
-ushort getdiag1(HBOARD me, HBOARD him, int x, int y)
+ushort getdiag1(ref x8<byte> me, ref x8<byte> him, int x, int y)
 {
   int i, d;
 
@@ -717,13 +666,13 @@ ushort getdiag1(HBOARD me, HBOARD him, int x, int y)
     if (i + d < 0 || i + d > 7)
       continue;
 
-    row |= (ushort)(((me.get(i + d) >> i) & 1) << (i + 8) | ((him.get(i + d) >> i) & 1) << i);
+    row |= (ushort)(((me[i + d] >> i) & 1) << (i + 8) | ((him[i + d] >> i) & 1) << i);
   }
   row &= (ushort)~(1 << (x + 8));
   return row;
 }
 
-void putdiag1(ref HBOARD me, ref HBOARD him, int x, int y, int row)
+void putdiag1(ref x8<byte> me, ref x8<byte> him, int x, int y, int row)
 {
   int d = y - x;
   byte hi = (byte)(row >> 8);
@@ -733,23 +682,23 @@ void putdiag1(ref HBOARD me, ref HBOARD him, int x, int y, int row)
     if ((i + d) < 0 || (i + d) > 7)
       continue;
 
-    byte b = me.get(i + d);
+    byte b = me[i + d];
     if ((hi & mask) != 0)
       b |= mask;
     else
       b &= (byte)~mask;
-    me.put(i + d, b);
+    me[i + d] = b;
 
-    b = him.get(i + d);
+    b = him[i + d];
     if ((row & mask) != 0)
       b |= mask;
     else
       b &= (byte)~mask;
-    him.put(i + d, b);
+    him[i + d] = b;
   }
 }
 
-ushort getdiag2(HBOARD me, HBOARD him, int x, int y)
+ushort getdiag2(ref x8<byte> me, ref x8<byte> him, int x, int y)
 {
   int d = y + x;
 
@@ -758,13 +707,13 @@ ushort getdiag2(HBOARD me, HBOARD him, int x, int y)
     if ((d - i) < 0 || (d - i) > 7)
       continue;
 
-    row |= (ushort)(((me.get(d - i) >> i) & 1) << (i + 8) | ((him.get(d - i) >> i) & 1) << i);
+    row |= (ushort)(((me[d - i] >> i) & 1) << (i + 8) | ((him[d - i] >> i) & 1) << i);
   }
   row &= (ushort)~(1 << (x + 8));
   return row;
 }
 
-void putdiag2(ref HBOARD me, ref HBOARD him, int x, int y, ushort row)
+void putdiag2(ref x8<byte> me, ref x8<byte> him, int x, int y, ushort row)
 {
   int d = y + x;
   byte hi = (byte)(row >> 8);
@@ -773,19 +722,19 @@ void putdiag2(ref HBOARD me, ref HBOARD him, int x, int y, ushort row)
     if ((d - i) < 0 || (d - i) > 7)
       continue;
 
-    byte b = me.get(d - i);
+    byte b = me[d - i];
     if ((hi & mask) != 0)
       b |= mask;
     else
       b &= (byte)~mask;
-    me.put(d - i, b);
+    me[d - i] = b;
 
-    b = him.get(d - i);
+    b = him[d - i];
     if ((row & mask) != 0)
       b |= mask;
     else
       b &= (byte)~mask;
-    him.put(d - i, b);
+    him[d - i] = b;
   }
 }
 
@@ -800,15 +749,15 @@ public void Begin(string[] args)
 {
   Console.WriteLine("Framework Version: {0}", Environment.Version);
 
-  initial.w[3] = (byte)0x10;
-  initial.w[4] = (byte)0x08;
-  initial.b[3] = (byte)0x08;
-  initial.b[4] = (byte)0x10;
+  initial.data[1][3] = (byte)0x10;
+  initial.data[1][4] = (byte)0x08;
+  initial.data[0][3] = (byte)0x08;
+  initial.data[0][4] = (byte)0x10;
 
   build_tables();
 
   bool player = false;
-  bool player_is_white = false;
+  byte player_is_white = 0;
 
   if (args.Length > 0) {
     var arg1 = args[0];
@@ -818,14 +767,14 @@ public void Begin(string[] args)
     case 'W':
       player = true;
       Console.WriteLine("You will be playing white.");
-      player_is_white = true;
+      player_is_white = 1;
       break;
 
     case 'b':
     case 'B':
       player = true;
       Console.WriteLine("You will be playing black.\n");
-      player_is_white = false;
+      player_is_white = 0;
       break;
     }
 
@@ -864,7 +813,7 @@ public void Begin(string[] args)
       computer_input(ref initial, is_white_turn);
 
     display_score(initial);
-    is_white_turn = !is_white_turn;
+    is_white_turn = (byte)(1 -is_white_turn);
 
     if (test_mode) {
       Console.WriteLine("test complete\n");
@@ -885,13 +834,13 @@ bool save()
 
   for (int y = 0; y < 8; y++) {
     for (int x = 0; x < 8; x++) {
-      sw.Write(ascii_values[TYPE(initial, x, y)]);
+      sw.Write(BoardCharAt(initial, x, y));
       sw.Write(' ');
     }
     sw.Write('\n');
   }
   sw.Write('\n');
-  char player = is_white_turn ? 'w' : 'b';
+  char player = is_white_turn != 0 ? 'w' : 'b';
   sw.WriteLine("{0} to play", player);
   return false;
 }
@@ -917,12 +866,12 @@ BOARD load(string name)
 
       case 'B':
       case 'b':
-        board.put(false, i, (byte)(board.get(false, i) | (1 << j)));
+        board.put(0, i, (byte)(board.get(0, i) | (1 << j)));
         break;
 
       case 'W':
       case 'w':
-        board.put(true, i, (byte)(board.get(true, i) | (1 << j)));
+        board.put(1, i, (byte)(board.get(1, i) | (1 << j)));
         break;
 
       case '-':
@@ -950,12 +899,12 @@ BOARD load(string name)
     switch (b) {
     case 'w':
     case 'W':
-      is_white_turn = true;
+      is_white_turn = 1;
       break;
 
     case 'b':
     case 'B':
-      is_white_turn = false;
+      is_white_turn = 0;
       break;
 
     default:
@@ -965,7 +914,7 @@ BOARD load(string name)
     }
 
     Console.WriteLine("Picking up where we left off... {0} to play",
-          is_white_turn ? "White" : "Black");
+          is_white_turn != 0 ? "White" : "Black");
     break;
   }
 
@@ -1061,7 +1010,7 @@ void alarm(int timeoutInSeconds) {
   }, null, timeoutInSeconds * 1000, Timeout.Infinite);
 }
 
-int search(BOARD board, bool is_white, out byte bestx, out byte besty)
+int search(BOARD board, byte is_white, out byte bestx, out byte besty)
 {
   int lvl;
   byte start;
@@ -1140,54 +1089,57 @@ int search(BOARD board, bool is_white, out byte bestx, out byte besty)
 }
 
 
-int score(BOARD board, bool is_white)
+int score(BOARD board, byte is_white)
 {
-  HBOARD me = board.half(is_white);
-  HBOARD him = board.half(!is_white);
+  byte other = (byte)(1-is_white);
+  x8<byte> me = board.half(is_white);
+  x8<byte> him = board.half(other);
 
   int s = 0;
 
   if (turn > ENDGAME) {
     for (int j = 0; j < 8; j++) {
-      s += bit_count[me.get(j)];
+      s += bit_count[me[j]];
     }
     return s;
   }
 
   int i;
   for (i = 2; i < 6; i++) {
-    s += weighted_row_value[me.get(i)];
+    s += weighted_row_value[me[i]];
   }
 
-  s -= bit_count[me.get(1) & 0x7e] + bit_count[me.get(6) & 0x7e] +
-       ((bit_count[me.get(1) & 0x42] + bit_count[me.get(6) & 0x42]) << 2);
+  s -= bit_count[me[1] & 0x7e] + bit_count[me[6] & 0x7e] +
+       ((bit_count[me[1] & 0x42] + bit_count[me[6] & 0x42]) << 2);
 
   int t = 0;
   for (i = 0; i < 8; i++)
-    t = (t << 1) | (1 & (me.get(i) >> 7));
+    t = (t << 1) | (1 & (me[i] >> 7));
 
   for (i = 0; i < 8; i++) {
-    t = (t << 1) | (1 & (him.get(i) >> 7));
+    t = (t << 1) | (1 & (him[i] >> 7));
   }
 
   s += edge[t];
 
   t = 0;
   for (i = 0; i < 8; i++)
-    t = (t << 1) | (me.get(i) & 1);
+    t = (t << 1) | (me[i] & 1);
   for (i = 0; i < 8; i++)
-    t = (t << 1) | (him.get(i) & 1);
+    t = (t << 1) | (him[i] & 1);
 
-  s += edge[t] + edge[(me.get(0) << 8) | him.get(0)] + edge[(me.get(7) << 8) | him.get(7)];
+  s += edge[t] + edge[(me[0] << 8) | him[0]] + edge[(me[7] << 8) | him[7]];
 
   return s;
 }
 
-int rsearch(BOARD board, bool is_white, byte depth, int lvl)
+
+int rsearch(BOARD board, byte is_white, byte depth, int lvl)
 {
   int sc;
   byte x;
   byte y;
+  byte other = (byte)(1-is_white);
 
   reset_scored_moves(1 - lvl);
   searching_to_end = false;
@@ -1197,10 +1149,10 @@ int rsearch(BOARD board, bool is_white, byte depth, int lvl)
   }
 
   Console.Write("{0}{1}=", (char)(x + 'a'), (char)('8' - y));
-  var brd = new BOARD(board);
+  var brd = board;
   flip(ref brd, is_white, x, y);
 
-  bs = mini(brd, !is_white, (byte)(depth - 1), HORRIBLE, GREAT);
+  bs = mini(brd, other, (byte)(depth - 1), HORRIBLE, GREAT);
   bx = x;
   by = y;
   Console.Write("{0}  ", bs - ((turn > ENDGAME) ? 0 : SCORE_BIAS));
@@ -1209,9 +1161,9 @@ int rsearch(BOARD board, bool is_white, byte depth, int lvl)
 
   while (remove_scored_move(out x, out y, lvl)) {
     Console.Write("{0}{1}", (char)(x + 'a'), (char)('8' - y));
-    brd = new BOARD(board);
+    brd = board;
     flip(ref brd, is_white, x, y);
-    sc = mini(brd, !is_white, (byte)(depth - 1), bs, GREAT);
+    sc = mini(brd, other, (byte)(depth - 1), bs, GREAT);
     insert_scored_move(x, y, sc, 1-lvl);
     if (sc > bs) {
       Console.Write('=');
@@ -1317,8 +1269,9 @@ bool remove_scored_move(out byte x, out byte y, int lvl)
 
 
 // minimax search with alpha beta pruning
-int mini(BOARD board, bool is_white, byte depth, int a, int b)
+int mini(BOARD board, byte is_white, byte depth, int a, int b)
 {
+  byte other = (byte)(1-is_white);
   if (IRQ) {
     throw new TimeoutException("Operation timed out.");
   }
@@ -1334,9 +1287,9 @@ int mini(BOARD board, bool is_white, byte depth, int a, int b)
     if (!found_anything) {
       if (turn > ENDGAME && !searching_to_end) {
         searching_to_end = true;
-        sc = maxi(board, !is_white, (byte)(depth + 1), a, b);
+        sc = maxi(board, other, (byte)(depth + 1), a, b);
       } else {
-        sc = maxi(board, !is_white, (byte)(depth - 1), a, b);
+        sc = maxi(board, other, (byte)(depth - 1), a, b);
       }
       return sc;
     }
@@ -1345,9 +1298,9 @@ int mini(BOARD board, bool is_white, byte depth, int a, int b)
     byte x;
     byte y;
     while (pop_move(out x, out y, depth)) {
-      var brd = new BOARD(board);
+      var brd = board;
       flip(ref brd, is_white, x, y);
-      sc = maxi(brd, !is_white, (byte)(depth - 1), a, b);
+      sc = maxi(brd, other, (byte)(depth - 1), a, b);
 
       // in this pass we're minning the maxes
       if (sc < b) {
@@ -1369,8 +1322,10 @@ int mini(BOARD board, bool is_white, byte depth, int a, int b)
   }
 }
 
-int maxi(BOARD board, bool is_white, byte depth, int a, int b)
+int maxi(BOARD board, byte is_white, byte depth, int a, int b)
 {
+  byte other = (byte)(1-is_white);
+
   if (IRQ)
     throw new TimeoutException("Operation timed out.");
   boards++;
@@ -1385,9 +1340,9 @@ int maxi(BOARD board, bool is_white, byte depth, int a, int b)
     if (!found_anything) {
       if (turn > ENDGAME && !searching_to_end) {
         searching_to_end = true;
-        sc = mini(board, !is_white, (byte)(depth + 1), a, b);
+        sc = mini(board, other, (byte)(depth + 1), a, b);
       } else {
-        sc = mini(board, !is_white, (byte)(depth - 1), a, b);
+        sc = mini(board, other, (byte)(depth - 1), a, b);
       }
       return sc;
     }
@@ -1396,9 +1351,9 @@ int maxi(BOARD board, bool is_white, byte depth, int a, int b)
     byte x;
     byte y;
     while (pop_move(out x, out y, depth)) {
-      var brd = new BOARD(board);
+      var brd = board;
       flip(ref brd, is_white, x, y);
-      sc = mini(brd, !is_white, (byte)(depth - 1), a, b);
+      sc = mini(brd, other, (byte)(depth - 1), a, b);
 
       // in this pass we're maxxing the mins
       if (sc > a) {
@@ -1421,16 +1376,16 @@ int maxi(BOARD board, bool is_white, byte depth, int a, int b)
 
 // the current depth just tell us which stack to put the valid moves on
 // the stacks are all pre-allocated so there is no malloc
-bool valid(BOARD board, bool is_white, byte current_depth)
+bool valid(BOARD board, byte is_white, byte current_depth)
 {
   reset_move_stack(current_depth);
   bool found_anything = false;
 
-  HBOARD me = board.half(is_white);
-  HBOARD him = board.half(!is_white);
+  x8<byte> me = board.half(is_white);
+  x8<byte> him = board.half((byte)(1-is_white));
 
   for (byte y = 0; y < 8; y++) {
-    ushort row = (ushort)((me.get(y) << 8) | him.get(y));
+    ushort row = (ushort)((me[y] << 8) | him[y]);
     byte used = (byte)(row | (row >> 8));
 
     // already full on this row, nothing to do
@@ -1543,8 +1498,8 @@ bool valid(BOARD board, bool is_white, byte current_depth)
     uint y1 = (uint)(used | (used << 8) | (used << 16));
 
     for (int i = y - 1; i >= 0; i--) {
-      byte h = him.get(i);
-      byte m = me.get(i);
+      byte h = him[i];
+      byte m = me[i];
       uint d0 = (uint)(((byte)(h >> (y-i)) << 16) | ((byte)(h << (y-i)) << 8) | h);
       uint d1 = (uint)(((byte)(m >> (y-i)) << 16) | ((byte)(m << (y-i)) << 8) | m);
 
@@ -1561,8 +1516,8 @@ bool valid(BOARD board, bool is_white, byte current_depth)
     y1 = (uint)(used2 | (used2 << 8) | (used2 << 16));
     y0 = 0;
     for (int i = y + 1;i < 8; i++) {
-      byte h = him.get(i);
-      byte m = me.get(i);
+      byte h = him[i];
+      byte m = me[i];
       uint d0 = (uint)(((byte)(h >> (i-y)) << 16) | ((byte)(h << (i-y)) << 8) | h);
       uint d1 = (uint)(((byte)(m >> (i-y)) << 16) | ((byte)(m << (i-y)) << 8) | m);
 
