@@ -219,7 +219,7 @@ again:;
   }
 
   byte x, y;
-  
+
   if (user_pass) {
     // make sure there are no moves
     if (pop_move(out x, out y, INITIAL_DEPTH)) {
@@ -430,10 +430,6 @@ void build_tables()
     stacks[i] = new Stack();
   }
 
-  for (int i =0; i < 2; i++) {
-    slist[i] = new scored_move_list();
-  }
-
   Console.WriteLine("Building general lookup tables");
   build_lookups();
 
@@ -631,7 +627,7 @@ void flip(ref BOARD board, bool is_white, int x, int y)
 {
   HBOARD me = board.half(is_white);
   HBOARD him = board.half(!is_white);
-  
+
   ushort row = (ushort)(gethorz(me, him, y) & (~(256 << x)));
 
   ushort new_row = flipt[pack_table[row], x];
@@ -679,7 +675,7 @@ ushort getvert(HBOARD me, HBOARD him, int x, int y)
 {
   ushort row = 0;
   ushort mask = (ushort)(1 << x);
-  for (int i = 0; i < 8; i++) {    
+  for (int i = 0; i < 8; i++) {
     row |= (ushort)(((( me.get(i) & mask)) != 0 ? 1 : 0) << (i + 8));
     row |= (ushort)((((him.get(i) & mask)) != 0 ? 1 : 0) << i);
   }
@@ -795,12 +791,12 @@ void putdiag2(ref HBOARD me, ref HBOARD him, int x, int y, ushort row)
 
 bool test_mode = false;
 
-static void Main(string[] args) 
+static void Main(string[] args)
 {
   (new Othello()).Begin(args);
 }
 
-public void Begin(string[] args) 
+public void Begin(string[] args)
 {
   Console.WriteLine("Framework Version: {0}", Environment.Version);
 
@@ -808,7 +804,7 @@ public void Begin(string[] args)
   initial.w[4] = (byte)0x08;
   initial.b[3] = (byte)0x08;
   initial.b[4] = (byte)0x10;
- 
+
   build_tables();
 
   bool player = false;
@@ -833,7 +829,7 @@ public void Begin(string[] args)
       break;
     }
 
-    if (arg1.Length >= 2) 
+    if (arg1.Length >= 2)
     switch (arg1[1]) {
     case 'l':
     case 'L':
@@ -974,7 +970,7 @@ BOARD load(string name)
   }
 
   return board;
-} 
+}
 
 // We keep moves we are considering here, this is for holding the next set of valid moves
 class Stack {
@@ -986,7 +982,7 @@ class Stack {
 Stack[] stacks = new Stack[32];
 
 void reset_move_stack(int lvl)
-{  
+{
   stacks[lvl].top = 0;
 }
 
@@ -1191,7 +1187,7 @@ int rsearch(BOARD board, bool is_white, byte depth, int lvl)
 {
   int sc;
   byte x;
-  byte y; 
+  byte y;
 
   reset_scored_moves(1 - lvl);
   searching_to_end = false;
@@ -1244,61 +1240,77 @@ struct scored_move {
 // the size is 64 because that's how many squares there are on the board
 // and that's still small but it we can't really have 64 valid scored_moves
 class scored_move_list {
-  public byte _put; // the number we put in 
+  public byte _put; // the number we put in
   public byte _get; // the one to get next
-  public scored_move[] scored_moves;
+  public x32<scored_move> moves;
 
-  public scored_move_list() { scored_moves = new scored_move[32]; }
+  public scored_move_list() { }
 };
 
-scored_move_list[] slist = new scored_move_list[2];
+// we alternate between two
+class SList {
+  public scored_move_list a;
+  public scored_move_list b;
+
+  public SList() {
+    a = new scored_move_list();
+    b = new scored_move_list();
+  }
+}
+
+SList slist = new SList();
 
 // reset the count of scored_moves in this level
 // lvl is 0/1 corresponding to the current recursion level, it alternates
 // so we're reading off of lvl and writing onto !lvl at any moment
 void reset_scored_moves(int lvl)
 {
-  scored_move_list S = slist[lvl];
-  S._get = S._put = 0;
+  scored_move_list l = lvl == 0 ? slist.a : slist.b;
+  l._get = 0;
+  l._put = 0;
 }
 
 void insert_scored_move(byte x, byte y, int score, int lvl)
 {
-  int i, j;
-  var S = slist[lvl];
-  var moves = S.scored_moves;
+  scored_move_list l = lvl == 0 ? slist.a : slist.b;
+
+  int i;
 
   // find the place to insert this scored_move
   // stop at the first place where this score is bigger
   // (i.e. the best ends up at the front)
-  for (i = 0; i < S._put; i++)
-    if (score > moves[i].score)
+  for (i = 0; i < l._put; i++) {
+    if (score > l.moves[i&31].score) {
       break;
-
-  for (j = S._put; j > i; j--) {
-    moves[j] = moves[j-1];
+    }
   }
 
-  moves[i].x = x;
-  moves[i].y = y;
-  moves[i].score = score;
-  S._put++;
+  i &= 31;
+  for (int j = l._put; j > i; j--) {
+    j &= 31;
+    l.moves[j] = l.moves[j-1];
+  }
+
+  l.moves[i].x = x;
+  l.moves[i].y = y;
+  l.moves[i].score = score;
+  l._put++;
 }
 
 bool remove_scored_move(out byte x, out byte y, int lvl)
 {
-  var S = slist[lvl];
+  scored_move_list l = lvl == 0 ? slist.a : slist.b;
 
-  if (S._get >= S._put) {
+  if (l._get >= l._put) {
     x = y = 0xff;
     return false;
   }
 
-  var moves = S.scored_moves;
+  int g = l._get & 31;
 
-  x = moves[S._get].x;
-  y = moves[S._get].y;
-  S._get++;
+  x = l.moves[g].x;
+  y = l.moves[g].y;
+  l._get++;
 
   return true;
 }
@@ -1368,7 +1380,7 @@ int maxi(BOARD board, bool is_white, byte depth, int a, int b)
   else {
     int sc;
     reset_move_stack(depth);
-  
+
     bool found_anything = valid(board, is_white, depth);
     if (!found_anything) {
       if (turn > ENDGAME && !searching_to_end) {
