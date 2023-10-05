@@ -55,79 +55,66 @@ struct x16<T> {
 }
 
 [InlineArray(8)]
-struct x16<T> {
+struct x8<T> {
   public T _0;
 }
 
 [InlineArray(2)]
-struct x16<T> {
+struct x2<T> {
   public T _0;
 }
 
-
 struct BOARD {
-  Vector128<ulong> data;
+  public x8<byte> w;
+  public x8<byte> b;
 
   public BOARD(BOARD copy) {
-    data = copy.data;
+    w = copy.w;
+    b = copy.b;
   }
 
   public BOARD() {
-    data = Vector128<ulong>.Zero;
-  }
-
-  public BOARD(Vector128<byte> v) {
-    data = v.AsUInt64();
   }
 
   public byte get(bool is_white, int j) {
-    return data.AsByte().GetElement(j + (is_white ? 8 : 0));
+    return is_white ? w[j&7] : b[j&7];
   }
 
-  public void put(bool is_white, int j, byte b) {
-    data = data.AsByte().WithElement((j + (is_white ? 8 : 0)), b).AsUInt64();
-  }
-
-  public BOARD(ulong b, ulong w) {
-    data = Vector128.Create(b,w);
+  public void put(bool is_white, int j, byte val) {
+    if (is_white)
+      w[j&7] = val;
+    else
+      b[j&7] = val;
   }
 
   public HBOARD half(bool is_white) {
-    return new HBOARD(data.GetElement(is_white ? 1 : 0));
+    return is_white ? new HBOARD(w) : new HBOARD(b);
   }
 
-  public BOARD(HBOARD lo, HBOARD hi) {
-    data = Vector128.Create(lo.getUlong(), hi.getUlong());
+  public BOARD(HBOARD _b, HBOARD _w) {
+    b = _b.data;
+    w = _w.data;
   }
 }
 
 // this is one player, half the board.  We keep the same data type for easy copying
 // to get the HBOARD we extract the top or bottom half
 struct HBOARD {
-  Vector128<byte> data;
+  public x8<byte> data;
 
   public HBOARD() {
-    data = Vector128<byte>.Zero;
   }
 
-  public HBOARD(HBOARD copy) {
-    data = copy.data;
-  }
-
-  public HBOARD(ulong x) {
-    data = Vector128.Create(x, (ulong)0).AsByte();
-  }
-
-  public ulong getUlong() {
-    return data.AsUInt64().GetElement(0);
+  public HBOARD(x8<byte> d) {
+    data = d;
   }
 
   public byte get(int i) {
-    return data.GetElement(i);
+    return data[i];
   }
 
   public void put(int i, byte b) {
-    data = data.WithElement(i, b);
+    data[i] = b;
   }
 }
 
@@ -331,14 +318,7 @@ void display(BOARD board)
   Console.Write('\n');
 }
 
-BOARD initial = new BOARD(
-   Vector128<byte>
-    .Zero
-    .WithElement(3, (byte)0x10)
-    .WithElement(4, (byte)0x08)
-    .WithElement(11, (byte)0x08)
-    .WithElement(12, (byte)0x10));
-
+BOARD initial = new BOARD();
 
 void display_one_row(int rowbits) {
   for (int x = 0; x < 8; x++) {
@@ -823,6 +803,12 @@ static void Main(string[] args)
 public void Begin(string[] args) 
 {
   Console.WriteLine("Framework Version: {0}", Environment.Version);
+
+  initial.w[3] = (byte)0x10;
+  initial.w[4] = (byte)0x08;
+  initial.b[3] = (byte)0x08;
+  initial.b[4] = (byte)0x10;
+ 
   build_tables();
 
   bool player = false;
