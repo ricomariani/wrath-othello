@@ -1,7 +1,6 @@
 #include "board.h"
 
-int score(BOARD board, int colour)
-{
+int score(BOARD board, int colour) {
   int i, s;
   unsigned int t;
   unsigned char *me, *him;

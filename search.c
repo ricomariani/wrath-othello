@@ -16,16 +16,12 @@ static int rsearch(BOARD board, int colour, int depth, int lvl);
 static int maxi(BOARD board, int colour, int depth, int a, int b);
 static int mini(BOARD board, int colour, int depth, int a, int b);
 
-static void timeout(int signum)
-{
-  IRQ = 1;
-}
+static void timeout(int signum) { IRQ = 1; }
 
 static void print_with_commas(int n) {
   if (n < 1000) {
-    printf ("%d", n);
-  }
-  else {
+    printf("%d", n);
+  } else {
     print_with_commas(n / 1000);
     printf(",%03d", n % 1000);
   }
@@ -33,14 +29,13 @@ static void print_with_commas(int n) {
 
 static void print_duration(double duration) {
   int seconds = (int)duration;
-  int minutes = seconds/60;
+  int minutes = seconds / 60;
   int millis = (duration - seconds) * 1000;
   seconds %= 60;
   printf("%d:%02d.%03d", minutes, seconds, millis);
 }
 
-int search(BOARD board, int colour, int *bestx, int *besty)
-{
+int search(BOARD board, int colour, int *bestx, int *besty) {
   int i, start, lvl, moves;
 
   signal(SIGALRM, timeout);
@@ -72,7 +67,7 @@ int search(BOARD board, int colour, int *bestx, int *besty)
     *bestx = bx;
     *besty = by;
     clock_t end_time = clock();
-    double duration = (end_time - start_time + 0.0)/CLOCKS_PER_SEC;
+    double duration = (end_time - start_time + 0.0) / CLOCKS_PER_SEC;
 
     if (duration == 0.0) {
       duration = 0.000001;
@@ -120,8 +115,7 @@ no_moves:
   longjmp(env, 1);
 }
 
-static int rsearch(BOARD board, int colour, int depth, int lvl)
-{
+static int rsearch(BOARD board, int colour, int depth, int lvl) {
   int x, y, sc;
   BOARD brd;
   int moves;
@@ -168,8 +162,7 @@ static int rsearch(BOARD board, int colour, int depth, int lvl)
   return bs;
 }
 
-static int mini(BOARD board, int colour, int depth, int a, int b)
-{
+static int mini(BOARD board, int colour, int depth, int a, int b) {
   if (IRQ)
     longjmp(env, 1);
   boards++;
@@ -213,13 +206,12 @@ static int mini(BOARD board, int colour, int depth, int a, int b)
         }
       }
     }
-    
+
     return b;
   }
 }
 
-static int maxi(BOARD board, int colour, int depth, int a, int b)
-{
+static int maxi(BOARD board, int colour, int depth, int a, int b) {
   if (IRQ)
     longjmp(env, 1);
   boards++;
@@ -266,13 +258,9 @@ static int maxi(BOARD board, int colour, int depth, int a, int b)
   }
 }
 
-static void bcpy(BOARD b1, BOARD b2)
-{
-  memcpy(b1, b2, sizeof(BOARD));
-}
+static void bcpy(BOARD b1, BOARD b2) { memcpy(b1, b2, sizeof(BOARD)); }
 
-void move(BOARD board, int colour, int x, int y)
-{
+void move(BOARD board, int colour, int x, int y) {
   board[colour][y] |= (1 << x);
   flip(board, colour, x, y);
   display(board);

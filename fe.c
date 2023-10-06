@@ -2,8 +2,7 @@
 
 #define DATA(mask, x) ((mask) & (1 << (x)))
 
-unsigned fe(unsigned mask, int colour, int x, int dx)
-{
+unsigned fe(unsigned mask, int colour, int x, int dx) {
   int i, him, me, x0;
 
   him = mask & 0xff;

@@ -7,7 +7,8 @@ typedef struct {
   char y;
 } xy;
 
-// We keep moves we are considering here, this is for holding the next set of valid moves
+// We keep moves we are considering here, this is for holding the next set of
+// valid moves
 typedef struct {
   char top;
   xy moves[64];
@@ -16,8 +17,7 @@ typedef struct {
 // these are all the stacks we will ever need, no malloc
 static stack stacks[64];
 
-void reset_move_stack(int lvl)
-{
+void reset_move_stack(int lvl) {
   stack *S = &stacks[lvl];
   S->top = 0;
 }
@@ -32,8 +32,7 @@ void push(int x, int y, int lvl) {
 
 // and they come off... the order is arbitrary anyway and stack is cheap
 // so we do that
-int pop_move(int *x, int *y, int lvl)
-{
+int pop_move(int *x, int *y, int lvl) {
   stack *S = &stacks[lvl];
   if (S->top) {
     S->top--;

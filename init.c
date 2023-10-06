@@ -9,8 +9,7 @@ static void safe_fgets(char *s, int len, FILE *f) {
   }
 }
 
-void load(const char *name, BOARD board)
-{
+void load(const char *name, BOARD board) {
   int i, j, n;
   char c[8];
   char s[80];
@@ -27,10 +26,9 @@ void load(const char *name, BOARD board)
 
   for (i = 0; i < 8; i++) {
     safe_fgets(s, sizeof(s), f);
-    
-    n = sscanf(s, " %c %c %c %c %c %c %c %c ", 
-      &c[0], &c[1], &c[2], &c[3],
-      &c[4], &c[5], &c[6], &c[7]);
+
+    n = sscanf(s, " %c %c %c %c %c %c %c %c ", &c[0], &c[1], &c[2], &c[3],
+               &c[4], &c[5], &c[6], &c[7]);
     if (n != 8) {
       fprintf(stderr, "wrath: Unable to parse input board\n");
       fflush(stderr);

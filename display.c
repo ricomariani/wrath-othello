@@ -10,16 +10,18 @@ char ascii_values[] = "-BW?";
 #define INDEX(rows, x, y) RINDEX((rows)[y], x)
 
 // this gets the type of the row board[0] is black and board[1] is white
-#define TYPE(board, x, y) (INDEX((board)[0], x, y) + (INDEX((board)[1], x, y) << 1))
+#define TYPE(board, x, y)                                                      \
+  (INDEX((board)[0], x, y) + (INDEX((board)[1], x, y) << 1))
 
-// here rowbits has a single row, black is the high bits and white is the low bits
-// the values are 0 empty, 1 black and 2 white just like the ascii table above
-#define RTYPE(rowbits, x) (RINDEX((rowbits >> 8), x) + (RINDEX((rowbits)&0xff, x) << 1))
+// here rowbits has a single row, black is the high bits and white is the low
+// bits the values are 0 empty, 1 black and 2 white just like the ascii table
+// above
+#define RTYPE(rowbits, x)                                                      \
+  (RINDEX((rowbits >> 8), x) + (RINDEX((rowbits)&0xff, x) << 1))
 
 // draw all the rows of the board
-void display(BOARD board)
-{
-  int  x, y;
+void display(BOARD board) {
+  int x, y;
 
   for (y = 0; y < 8; y++) {
     // row label (digit)
@@ -54,8 +56,7 @@ void display_one_row(int rowbits) {
 
 // this is the raw score, just counts
 // the evaulation is not this at all.
-void display_score(BOARD board)
-{
+void display_score(BOARD board) {
   int sc1, sc2, i;
 
   sc1 = 0;

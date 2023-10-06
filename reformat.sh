@@ -5,4 +5,4 @@ fix() {
   mv tmp $1
 }
 
- for dir in *.c *.h; do fix $dir; done
+for dir in *.c *.h; do fix $dir; done

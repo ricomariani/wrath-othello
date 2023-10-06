@@ -5,8 +5,7 @@
 
 // the current depth just tell us which stack to put the valid moves on
 // the stacks are all pre-allocated so there is no malloc
-int valid(BOARD board, int colour, int current_depth)
-{
+int valid(BOARD board, int colour, int current_depth) {
   // we put the board in a sea of zeros so we can go off either
   // end with impunity
 
@@ -18,14 +17,14 @@ int valid(BOARD board, int colour, int current_depth)
   words[3] = *(uint64_t *)&board[!colour][0];
   words[4] = 0;
 
-  uint8_t *me  = (uint8_t*)(&words[0]);
-  uint8_t *him = (uint8_t*)(&words[2]);
+  uint8_t *me = (uint8_t *)(&words[0]);
+  uint8_t *him = (uint8_t *)(&words[2]);
 
   reset_move_stack(current_depth);
   int found_anything = 0;
 
   for (int y = 0; y < 8; y++) {
-    unsigned row = (me[8+y] << 8) | him[8+y];
+    unsigned row = (me[8 + y] << 8) | him[8 + y];
     unsigned char used = (row | (row >> 8));
 
     // already full on this row, nothing to do
@@ -136,15 +135,19 @@ int valid(BOARD board, int colour, int current_depth)
 
     for (int i = 1; i < 8; i++) {
       int index = 8 + y;
-      int up = index + i;   // we can go off the end
+      int up = index + i; // we can go off the end
       int down = index - i;
 
       uint64_t up_d0, up_d1, down_d0, down_d1, d;
 
-      d = him[up];     up_d0 = load_state(d >> i, d << i, d);
-      d = me[up];      up_d1 = load_state(d >> i, d << i, d);
-      d = him[down]; down_d0 = load_state(d >> i, d << i, d);
-      d = me[down];  down_d1 = load_state(d >> i, d << i, d);
+      d = him[up];
+      up_d0 = load_state(d >> i, d << i, d);
+      d = me[up];
+      up_d1 = load_state(d >> i, d << i, d);
+      d = him[down];
+      down_d0 = load_state(d >> i, d << i, d);
+      d = me[down];
+      down_d1 = load_state(d >> i, d << i, d);
 
       uint64_t d0 = (up_d0 << 32) | down_d0;
       uint64_t d1 = (up_d1 << 32) | down_d1;
@@ -153,8 +156,8 @@ int valid(BOARD board, int colour, int current_depth)
       y0 = ((~y1) & d0) | (y0 & (y1 | d1));
       y1 |= d1 | (~d0);
 
-      // when y1 is set the computation is finished either way, if they are all finished
-      // then we can bail out.
+      // when y1 is set the computation is finished either way, if they are all
+      // finished then we can bail out.
       if ((~y1) == 0)
         break;
     }

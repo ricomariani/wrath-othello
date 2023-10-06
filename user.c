@@ -3,8 +3,7 @@
 #define INITIAL_DEPTH 0
 
 // here we ask the user what they want to do.
-int user_input(BOARD board, int colour)
-{
+int user_input(BOARD board, int colour) {
 again:;
   // user input x and y
   int user_x = -1;
@@ -66,8 +65,7 @@ again:;
     if (s[i] == 's') {
       if (save()) {
         goto again;
-      }
-      else {
+      } else {
         exit(0);
       }
     }

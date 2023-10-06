@@ -4,8 +4,7 @@
 // it's done uniformly like this so that the logic for
 // player vs. computer is basically the same as computer
 // vs. itself.
-void computer_input(BOARD board, int colour)
-{
+void computer_input(BOARD board, int colour) {
   int x, y;
 
   int score = search(board, colour, &x, &y);

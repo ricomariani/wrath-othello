@@ -1,6 +1,7 @@
 #define BLACK 0
 #define WHITE 1
 
+#include <assert.h>
 #include <inttypes.h>
 #include <memory.h>
 #include <setjmp.h>
@@ -11,7 +12,6 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
-#include <assert.h>
 
 typedef unsigned char BOARD[2][8];
 typedef unsigned char *LAYER;
@@ -25,7 +25,7 @@ typedef unsigned char *LAYER;
 // sooner.
 #define ENDGAME 44
 
-// By happenstance it works out that a neutral board score is 8187, 
+// By happenstance it works out that a neutral board score is 8187,
 // all the scores are positive, so we subtract that out to make it
 // seem positive or negative for bad/good.
 #define SCORE_BIAS 8187

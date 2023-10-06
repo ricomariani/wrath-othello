@@ -7,8 +7,7 @@
 #define RTYPE(board, x)                                                        \
   (RINDEX((board >> 8), x) + (RINDEX((board)&0xff, x) << 1))
 
-void safe_gets(char *buf, int len)
-{
+void safe_gets(char *buf, int len) {
   char *result = fgets(buf, len, stdin);
   if (result) {
     // clobber the trailing \n
@@ -18,8 +17,7 @@ void safe_gets(char *buf, int len)
   }
 }
 
-int save()
-{
+int save() {
   char name[80];
 
   printf("filename (press return to abort): ");
@@ -46,8 +44,7 @@ int save()
 }
 
 // once used as the ^C handler
-static void catch ()
-{
+static void catch () {
   char confirm[100];
 
   printf("\nreally quit (y/n)? ");

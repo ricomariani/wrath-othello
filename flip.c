@@ -1,18 +1,21 @@
 #include "board.h"
 
-static void putdiag1(unsigned char *me, unsigned char *him, int x, int y, int row);
-static void putdiag2(unsigned char *me, unsigned char *him, int x, int y, int row);
+static void putdiag1(unsigned char *me, unsigned char *him, int x, int y,
+                     int row);
+static void putdiag2(unsigned char *me, unsigned char *him, int x, int y,
+                     int row);
 static int gethorz(unsigned char *me, unsigned char *him, int y);
 static void puthorz(unsigned char *me, unsigned char *him, int y, int row);
 static int getvert(unsigned char *me, unsigned char *him, int x, int y);
 static void putvert(unsigned char *me, unsigned char *him, int x, int row);
-static int getdiag1(unsigned char  *me, unsigned char *him, int x, int y);
-static void putdiag1(unsigned char *me, unsigned char *him, int x, int y, int row);
+static int getdiag1(unsigned char *me, unsigned char *him, int x, int y);
+static void putdiag1(unsigned char *me, unsigned char *him, int x, int y,
+                     int row);
 static int getdiag2(unsigned char *me, unsigned char *him, int x, int y);
-static void putdiag2(unsigned char *me, unsigned char *him, int x, int y, int row);
+static void putdiag2(unsigned char *me, unsigned char *him, int x, int y,
+                     int row);
 
-void flip(BOARD board, int colour, int x, int y)
-{
+void flip(BOARD board, int colour, int x, int y) {
   unsigned char *me, *him;
   unsigned short row, new;
 
@@ -42,19 +45,16 @@ void flip(BOARD board, int colour, int x, int y)
     putdiag2(me, him, x, y, new);
 }
 
-static int gethorz(unsigned char *me, unsigned char *him, int y)
-{
+static int gethorz(unsigned char *me, unsigned char *him, int y) {
   return (me[y] << 8) | (him[y]);
 }
 
-static void puthorz(unsigned char *me, unsigned char *him, int y, int row)
-{
+static void puthorz(unsigned char *me, unsigned char *him, int y, int row) {
   me[y] = (row >> 8);
   him[y] = (row & 0xff);
 }
 
-static int getvert(unsigned char *me, unsigned char *him, int x, int y)
-{
+static int getvert(unsigned char *me, unsigned char *him, int x, int y) {
   int row, i;
 
   row = 0;
@@ -64,8 +64,7 @@ static int getvert(unsigned char *me, unsigned char *him, int x, int y)
   return (row & ~(1 << (y + 8)));
 }
 
-static void putvert(unsigned char *me, unsigned char *him, int x, int row)
-{
+static void putvert(unsigned char *me, unsigned char *him, int x, int row) {
   int i, b, hi, m, mx;
 
   hi = row >> 8;
@@ -89,8 +88,7 @@ static void putvert(unsigned char *me, unsigned char *him, int x, int row)
   }
 }
 
-static int getdiag1(unsigned char  *me, unsigned char *him, int x, int y)
-{
+static int getdiag1(unsigned char *me, unsigned char *him, int x, int y) {
   int i, d, row;
 
   d = y - x;
@@ -106,8 +104,8 @@ static int getdiag1(unsigned char  *me, unsigned char *him, int x, int y)
   return (row & (~(1 << (x + 8))));
 }
 
-static void putdiag1(unsigned char *me, unsigned char *him, int x, int y, int row)
-{
+static void putdiag1(unsigned char *me, unsigned char *him, int x, int y,
+                     int row) {
   int hi, i, d, b, m;
 
   d = y - x;
@@ -134,8 +132,7 @@ static void putdiag1(unsigned char *me, unsigned char *him, int x, int y, int ro
   }
 }
 
-static int getdiag2(unsigned char *me, unsigned char *him, int x, int y)
-{
+static int getdiag2(unsigned char *me, unsigned char *him, int x, int y) {
   int i, d, row;
 
   d = y + x;
@@ -151,8 +148,8 @@ static int getdiag2(unsigned char *me, unsigned char *him, int x, int y)
   return (row & (~(1 << (x + 8))));
 }
 
-static void putdiag2(unsigned char *me, unsigned char *him, int x, int y, int row)
-{
+static void putdiag2(unsigned char *me, unsigned char *him, int x, int y,
+                     int row) {
   int hi, i, d, b, m;
 
   d = y + x;

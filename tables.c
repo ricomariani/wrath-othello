@@ -6,8 +6,7 @@ unsigned short flipt[65536][8];
 static void build_lookups(void);
 static int edge_recursive(unsigned index);
 
-void build_tables()
-{
+void build_tables() {
   printf("Building general lookup tables\n");
   build_lookups();
 
@@ -22,8 +21,7 @@ void build_tables()
   printf("Computation complete\n");
 }
 
-static int edge_recursive(unsigned row)
-{
+static int edge_recursive(unsigned row) {
   if (edge[row]) {
     // already computed
     return edge[row];
@@ -38,13 +36,13 @@ static int edge_recursive(unsigned row)
 
   int both = (lo | hi);
   // if the row is full just count the bits
-  if (both  == 0xff) {
+  if (both == 0xff) {
     // the hi bits are "me" the low bits are "him"
     // we always evaluate like this it's not really the color it's always me/him
     edge[row] = bit_count[hi] << 9;
 
-    // these are all no-op cases in the flip table -- attempting to flip does nothing
-    // no matter where you try to flip nothing happens.
+    // these are all no-op cases in the flip table -- attempting to flip does
+    // nothing no matter where you try to flip nothing happens.
     for (int i = 0; i < 8; i++) {
       // all 8 possible moves are no-op, row already full
       flipt[row][i] = row;
@@ -53,10 +51,11 @@ static int edge_recursive(unsigned row)
     return edge[row];
   }
 
-  // to get the value of this edge combo, we're going to compute all the possible ways
-  // it could flip to full from this position and average the final value of each
-  // way.  To do this we count the number of possible flips and score it flipped each
-  // of the two ways.  This isn't perfect but it is heuristically pretty good.
+  // to get the value of this edge combo, we're going to compute all the
+  // possible ways it could flip to full from this position and average the
+  // final value of each way.  To do this we count the number of possible flips
+  // and score it flipped each of the two ways.  This isn't perfect but it is
+  // heuristically pretty good.
 
   // Note that we are also computing the flip table as we do this.  So we don't
   // use the table but we do populate it.
@@ -102,13 +101,12 @@ static int edge_recursive(unsigned row)
   return edge[row];
 }
 
-static void build_lookups()
-{
+static void build_lookups() {
   for (int i = 0; i < 256; i++) {
     // we do it in this order so that bit values has the lowest bits in the LSB
     for (int j = 7; j >= 0; j--) {
       // this is a straight bit count
-      if (i & (1<<j)) {
+      if (i & (1 << j)) {
         bit_count[i]++;
         bit_values[i] <<= 4;
         bit_values[i] |= 0x8 | j;
