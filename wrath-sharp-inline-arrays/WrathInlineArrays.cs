@@ -119,7 +119,7 @@ again:;
 
   // recompute the valid moves and put them on the stack
   // they go on stack number INITIAL_DEPTH (i.e. the root)
-  valid(board, is_white, INITIAL_DEPTH);
+  valid(ref board, is_white, INITIAL_DEPTH);
 
   Console.Write("Please enter a move --> ");
 
@@ -1043,7 +1043,7 @@ int search(BOARD board, byte is_white, out byte bestx, out byte besty)
   stopwatch.Start();
 
   try {
-    found_anything = valid(board, is_white, start);
+    found_anything = valid(ref board, is_white, start);
     if (!found_anything) {
       bx = 0xff;
       by = 0xff;
@@ -1133,7 +1133,6 @@ int score(BOARD board, byte is_white)
   return s;
 }
 
-
 int rsearch(BOARD board, byte is_white, byte depth, int lvl)
 {
   int sc;
@@ -1152,7 +1151,7 @@ int rsearch(BOARD board, byte is_white, byte depth, int lvl)
   var brd = board;
   flip(ref brd, is_white, x, y);
 
-  bs = mini(brd, other, (byte)(depth - 1), HORRIBLE, GREAT);
+  bs = mini(ref brd, other, (byte)(depth - 1), HORRIBLE, GREAT);
   bx = x;
   by = y;
   Console.Write("{0}  ", bs - ((turn > ENDGAME) ? 0 : SCORE_BIAS));
@@ -1163,7 +1162,7 @@ int rsearch(BOARD board, byte is_white, byte depth, int lvl)
     Console.Write("{0}{1}", (char)(x + 'a'), (char)('8' - y));
     brd = board;
     flip(ref brd, is_white, x, y);
-    sc = mini(brd, other, (byte)(depth - 1), bs, GREAT);
+    sc = mini(ref brd, other, (byte)(depth - 1), bs, GREAT);
     insert_scored_move(x, y, sc, 1-lvl);
     if (sc > bs) {
       Console.Write('=');
@@ -1269,7 +1268,7 @@ bool remove_scored_move(out byte x, out byte y, int lvl)
 
 
 // minimax search with alpha beta pruning
-int mini(BOARD board, byte is_white, byte depth, int a, int b)
+int mini(ref BOARD board, byte is_white, byte depth, int a, int b)
 {
   byte other = (byte)(1-is_white);
   if (IRQ) {
@@ -1283,13 +1282,13 @@ int mini(BOARD board, byte is_white, byte depth, int a, int b)
     int sc;
     reset_move_stack(depth);
 
-    bool found_anything = valid(board, is_white, depth);
+    bool found_anything = valid(ref board, is_white, depth);
     if (!found_anything) {
       if (turn > ENDGAME && !searching_to_end) {
         searching_to_end = true;
-        sc = maxi(board, other, (byte)(depth + 1), a, b);
+        sc = maxi(ref board, other, (byte)(depth + 1), a, b);
       } else {
-        sc = maxi(board, other, (byte)(depth - 1), a, b);
+        sc = maxi(ref board, other, (byte)(depth - 1), a, b);
       }
       return sc;
     }
@@ -1300,7 +1299,7 @@ int mini(BOARD board, byte is_white, byte depth, int a, int b)
     while (pop_move(out x, out y, depth)) {
       var brd = board;
       flip(ref brd, is_white, x, y);
-      sc = maxi(brd, other, (byte)(depth - 1), a, b);
+      sc = maxi(ref brd, other, (byte)(depth - 1), a, b);
 
       // in this pass we're minning the maxes
       if (sc < b) {
@@ -1322,7 +1321,7 @@ int mini(BOARD board, byte is_white, byte depth, int a, int b)
   }
 }
 
-int maxi(BOARD board, byte is_white, byte depth, int a, int b)
+int maxi(ref BOARD board, byte is_white, byte depth, int a, int b)
 {
   byte other = (byte)(1-is_white);
 
@@ -1336,13 +1335,13 @@ int maxi(BOARD board, byte is_white, byte depth, int a, int b)
     int sc;
     reset_move_stack(depth);
 
-    bool found_anything = valid(board, is_white, depth);
+    bool found_anything = valid(ref board, is_white, depth);
     if (!found_anything) {
       if (turn > ENDGAME && !searching_to_end) {
         searching_to_end = true;
-        sc = mini(board, other, (byte)(depth + 1), a, b);
+        sc = mini(ref board, other, (byte)(depth + 1), a, b);
       } else {
-        sc = mini(board, other, (byte)(depth - 1), a, b);
+        sc = mini(ref board, other, (byte)(depth - 1), a, b);
       }
       return sc;
     }
@@ -1353,7 +1352,7 @@ int maxi(BOARD board, byte is_white, byte depth, int a, int b)
     while (pop_move(out x, out y, depth)) {
       var brd = board;
       flip(ref brd, is_white, x, y);
-      sc = mini(brd, other, (byte)(depth - 1), a, b);
+      sc = mini(ref brd, other, (byte)(depth - 1), a, b);
 
       // in this pass we're maxxing the mins
       if (sc > a) {
@@ -1374,15 +1373,16 @@ int maxi(BOARD board, byte is_white, byte depth, int a, int b)
   }
 }
 
+bool valid(ref BOARD board, byte is_white, byte current_depth) {
+  return valid2(ref board.data[is_white & 1], ref board.data[1 & (byte)(1-is_white)], current_depth);
+}
+
 // the current depth just tell us which stack to put the valid moves on
 // the stacks are all pre-allocated so there is no malloc
-bool valid(BOARD board, byte is_white, byte current_depth)
+bool valid2(ref x8<byte> me, ref x8<byte> him, byte current_depth)
 {
   reset_move_stack(current_depth);
   bool found_anything = false;
-
-  x8<byte> me = board.half(is_white);
-  x8<byte> him = board.half((byte)(1-is_white));
 
   for (byte y = 0; y < 8; y++) {
     ushort row = (ushort)((me[y] << 8) | him[y]);
