@@ -11,20 +11,41 @@ using System.Runtime.InteropServices;
 
 class Othello {
 
-ushort[] edge = new ushort[65536];
-ushort[,] flipt = new ushort[6561, 8];
 int turn = 0;
 int consecutive_passes = 0;
 byte is_white_turn = 1;
+
 readonly int ENDGAME = 44;
 readonly int SCORE_BIAS = 8187;
 readonly byte INITIAL_DEPTH = 0;
 readonly byte BLACK = 0;
 readonly byte WHITE = 1;
 
-byte[] bit_count = new byte[256];
-byte[] weighted_row_value = new byte[256];
-ulong[] bit_values = new ulong[256];
+// this gives the value of an edge
+// you hace to flip the vertical bits
+static x65536<ushort> edge;
+
+// flipt[row][x] tell us how to flip
+// the row if we place a piece on
+// the given row, in column x.  You have
+// to extract the columns and diagonals
+// to use this elsewhere
+static x6561<x8<ushort>> flipt;
+
+// This tells us how many bits are set
+// in this byte.  Useful for endgame
+// scoring and current score display.
+static x256<byte> bit_count;
+
+// this gives the value of a row I own
+// in the middle of the board (not the edges)
+static x256<byte> weighted_row_value;
+
+// This has the bit numbers lie 0x05 encodes to 0xc8
+// one nibble encodes each bit position the high bit is set
+// to make the nibble non-zero if there is a bit there
+// so you can read out the bits with &7 then >>4
+static x256<ulong> bit_values;
 
 // The black and white occupied slots of a board row
 // are represented by two bytes in a short. But there
@@ -35,13 +56,28 @@ ulong[] bit_values = new ulong[256];
 // So literally pack_table[mask] == pack_board_row(mask)
 // for all valid masks.  We skip any that have both black
 // and white set.
-ushort[] pack_table = new ushort[65536];
+static x65536<ushort> pack_table;
 
 public class TimeoutException : Exception
 {
     public TimeoutException(string message) : base(message)
     {
     }
+}
+
+[InlineArray(6561)]
+struct x6561<T> {
+  public T _0;
+}
+
+[InlineArray(65536)]
+struct x65536<T> {
+  public T _0;
+}
+
+[InlineArray(256)]
+struct x256<T> {
+  public T _0;
 }
 
 [InlineArray(32)]
@@ -427,7 +463,7 @@ int edge_recursive(ushort row)
     // no matter where you try to flip nothing happens.
     for (int i = 0; i < 8; i++) {
       // all 8 possible moves are no-op, row already full
-      flipt[pack_table[row], i] = row;
+      flipt[pack_table[row]][i] = row;
     }
 
     return edge[row];
@@ -453,7 +489,7 @@ int edge_recursive(ushort row)
     // if this bit is already set we skip it
     if ((both & (1 << i)) != 0) {
       // but first we make this another no-op flip.
-      flipt[row_index, i] = row;
+      flipt[row_index][i] = row;
       continue;
     }
 
@@ -469,7 +505,7 @@ int edge_recursive(ushort row)
     // the flip table is normalized for black to move but
     // remember this is all me/him so in context the bits could
     // be black or white
-    flipt[row_index, i] = t;
+    flipt[row_index][i] = t;
 
     // now score the other outcome, WHITE gets the cell
     ushort t2 = row;
@@ -585,24 +621,24 @@ void flip2(ref x8<byte> me, ref x8<byte> him, int x, int y)
 {
   ushort row = (ushort)(gethorz(ref me, ref him, y) & (~(256 << x)));
 
-  ushort new_row = flipt[pack_table[row], x];
+  ushort new_row = flipt[pack_table[row]][x];
   puthorz(ref me, ref him, y, new_row);
 
   row = getvert(ref me, ref him, x, y);
-  new_row = flipt[pack_table[row], y];
+  new_row = flipt[pack_table[row]][y];
   row |= (ushort)(256 << y);
   if (new_row != row) {
     putvert(ref me, ref him, x, new_row);
   }
 
   row = getdiag1(ref me, ref him, x, y);
-  new_row = flipt[pack_table[row], x];
+  new_row = flipt[pack_table[row]][x];
   row |= (ushort)(256 << x);
   if (new_row != row)
     putdiag1(ref me, ref him, x, y, new_row);
 
   row = getdiag2(ref me, ref him, x, y);
-  new_row = flipt[pack_table[row], x];
+  new_row = flipt[pack_table[row]][x];
   row |= (ushort)(256 << x);
   if (new_row != row)
     putdiag2(ref me, ref him, x, y, new_row);
@@ -1406,7 +1442,7 @@ bool valid2(ref x8<byte> me, ref x8<byte> him, byte current_depth)
       // remember me is in the high bits and him is in the low bits
       // so we place onto the high bits.  And d1 has the current bit mask
 
-      if ((row | (mask << 8)) != flipt[pack_table[row], i]) {
+      if ((row | (mask << 8)) != flipt[pack_table[row]][i]) {
         push(i, y, current_depth);
         used |= mask;
         found_anything = true;
