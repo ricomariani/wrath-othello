@@ -246,32 +246,19 @@ void show(int depth, int score)
 
 string ascii_values = "-BW?";
 
-// This is true or false if the bit is set in the row for one color
-int RINDEX(int rowbits, int x) {
-  return (rowbits & (1 << x)) != 0 ? 1 : 0;
-}
-
-// this get the row out of the given board (black or white) and then is true
-// if that board has a bit at x, y
-int INDEX(HBOARD hb, int x, int y) {
-  byte b = hb.get(y);
-  return (b & (1 << x)) != 0 ? 1 : 0;
-}
-
 // this gets the type of the row board[0] is black and board[1] is white
-int TYPE(BOARD board, int x, int y) {
-  byte b1 = board.half(false).get(y);
-  byte mask = (byte)(1 << x);
-  int i1 = (b1 & mask) != 0 ? 1 : 0;
-  byte b2 = board.half(true).get(y);
-  int i2 = (b2 & mask) != 0 ? 2 : 0;
-  return i1 + i2;
+// this is used only for display
+char BoardCharAt(BOARD board, int x, int y) {
+  int i1 = (board.get(false, y) >> x) & 1;
+  int i2 = (board.get(true, y) >> x) & 1;
+  return ascii_values[i1 + (i2 << 1)];
 }
 
 // here row has a single row, black is the high bits and white is the low bits
 // the values are 0 empty, 1 black and 2 white just like the ascii table above
-int RTYPE(int row, int x) {
-   return ((row >> (8 + x)) & 1) + 2 * ((row >> x) & 1);
+// this is used only for display
+char RowCharAt(int row, int x) {
+   return ascii_values[((row >> (8 + x)) & 1) + 2 * ((row >> x) & 1)];
 }
 
 // draw all the rows of the board
@@ -285,7 +272,7 @@ void display(BOARD board)
 
     // board data
     for (x = 0; x < 8; x++) {
-      Console.Write(ascii_values[TYPE(board, x, y)]);
+      Console.Write(BoardCharAt(board, x, y));
       Console.Write(' ');
     }
     Console.Write('\n');
@@ -299,6 +286,12 @@ void display(BOARD board)
   Console.Write('\n');
 }
 
+void display_one_row(int rowbits) {
+  for (int x = 0; x < 8; x++) {
+    Console.Write(RowCharAt(rowbits, x));
+  }
+}
+
 BOARD initial = new BOARD(
    Vector128<byte>
     .Zero
@@ -306,13 +299,6 @@ BOARD initial = new BOARD(
     .WithElement(4, (byte)0x08)
     .WithElement(11, (byte)0x08)
     .WithElement(12, (byte)0x10));
-
-
-void display_one_row(int rowbits) {
-  for (int x = 0; x < 8; x++) {
-    Console.Write(ascii_values[RTYPE(rowbits, x)]);
-  }
-}
 
 
 // this is the raw score, just counts
@@ -777,7 +763,7 @@ bool save()
 
   for (int y = 0; y < 8; y++) {
     for (int x = 0; x < 8; x++) {
-      sw.Write(ascii_values[TYPE(initial, x, y)]);
+      sw.Write(BoardCharAt(initial, x, y));
       sw.Write(' ');
     }
     sw.Write('\n');
