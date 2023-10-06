@@ -30,7 +30,7 @@ static x65536<ushort> edge;
 // the given row, in column x.  You have
 // to extract the columns and diagonals
 // to use this elsewhere
-static x6561<x8<ushort>> flipt;
+static x65536<x8<ushort>> flipt;
 
 // This tells us how many bits are set
 // in this byte.  Useful for endgame
@@ -46,17 +46,6 @@ static x256<byte> weighted_row_value;
 // to make the nibble non-zero if there is a bit there
 // so you can read out the bits with &7 then >>4
 static x256<ulong> bit_values;
-
-// The black and white occupied slots of a board row
-// are represented by two bytes in a short. But there
-// are only 3 combinations, none, black, and white.
-// This means you can represent a given board row as
-// a base three number.  pack_table[i] is the pre-computed
-// number representing the row as computed by pack_board_row.
-// So literally pack_table[mask] == pack_board_row(mask)
-// for all valid masks.  We skip any that have both black
-// and white set.
-static x65536<ushort> pack_table;
 
 public class TimeoutException : Exception
 {
@@ -369,49 +358,6 @@ void build_lookups()
   }
 }
 
-int pack_board_row(int board_row)
-{
-  int s = 0;
-
-  for (int mask = 0x01; mask <= 0x80; mask <<= 1) {
-    // s += (s <<1 ) multiplies s by 3 by adding it to twice itself
-    // then either add 1 or 2 depending on which bit is set
-    s += (s << 1) + ((board_row & mask) != 0 ? 1 : 0) + ((((board_row & (mask << 8)) != 0 ? 1 : 0)) << 1);
-  }
-
-  return s;
-}
-
-// This is only used for testing... see the test code below
-int unpack_board_row(int packed_value)
-{
-  int d;
-  int board_row = 0;
-
-  for (int mask = 0x80; mask != 0; mask >>= 1) {
-    // pull out the first base 3 digit
-    // note that the board high bits are stored in the lowest digit
-    d = packed_value % 3;
-
-    // set up to pull out the next digit
-    packed_value /= 3;
-
-    // if the digit is zero set nothing
-    if (d != 0) {
-      if (d == 1) {
-        // if the digit is 1 set the low bits
-        board_row |= mask;
-      }
-      else {
-        // if the digit is 2 set the high bits
-        board_row |= (mask << 8);
-      }
-    }
-  }
-
-  return board_row;
-}
-
 void build_tables()
 {
   for (int i = 0; i < 32; i++) {
@@ -420,9 +366,6 @@ void build_tables()
 
   Console.WriteLine("Building general lookup tables");
   build_lookups();
-
-  Console.WriteLine("Building pack_board_row table");
-  build_pack_table();
 
   Console.WriteLine("Building edge table");
 
@@ -463,7 +406,7 @@ int edge_recursive(ushort row)
     // no matter where you try to flip nothing happens.
     for (int i = 0; i < 8; i++) {
       // all 8 possible moves are no-op, row already full
-      flipt[pack_table[row]][i] = row;
+      flipt[row][i] = row;
     }
 
     return edge[row];
@@ -481,7 +424,7 @@ int edge_recursive(ushort row)
   int count = 0;
 
   // normalize the row to its row number 0-6561
-  int row_index = pack_table[row];
+  int row_index = row;
 
   // try flipping every bit
   for (int i = 0; i < 8; i++) {
@@ -519,51 +462,6 @@ int edge_recursive(ushort row)
   // the score is the average outcome
   edge[row] = (ushort)(sum / count);
   return edge[row];
-}
-
-// The loose row representation is 8 bits for black 8 bits for white
-// but because any given cell can only have 3 actual states, black-white-empty
-// the total number of valid rows is only 3^8 which is 6561.  This is much smaller
-// than 2^16 (65536) almost exactly 10% the size.  So for the edge tables
-// we only want to store data for valid row combos.  Hence we need a function
-// that maps from a loose row to its row number.  We can do this with a lookup
-// table. This code creates that table.  The code is sufficiently fast now
-// that the test code is in there full time which would once have been unthinkable.
-//
-// A reverse mapping would be useful if we wanted to visit all row combinations
-// but that basically doesn't happen.  So unpack only exists for this test code.
-// You could quickly visit all 6561 rows and get their loose mappings saving you
-// lots of loop iterations. But at this point we don't have that mapping anyway.
-void build_pack_table()
-{
-  // we loop through all 64k combos but we're going to prune away the invalid ones
-  for (int row = 0; row < 65536; row++) {
-    // any value where any high byte has a common bit with a low byte can be
-    // skipped. It isn't a valid board row -- that would be a a row with cells that
-    // are both black and white.
-    if ((row & (row >> 8)) != 0) continue;
-
-    int row_index = pack_board_row(row);
-
-    // do the reverse mapping
-    int row_copy = unpack_board_row(row_index);
-
-    // test packing/unpacking -- paranoid testing
-    if (row != row_copy) {
-      Console.Write("Yipe! ");
-      Console.WriteLine("{0:x} {1} {2:x} ", row, row_index, row_copy);
-      display_one_row(row);
-      Console.Write(" != ");
-      display_one_row(row_copy);
-      Environment.Exit(99);
-    }
-
-    pack_table[row] = (ushort)row_index;
-
-    // This could easily be done if it were ever needed
-    // extern unsigned short unpack_table[6561];
-    // unpack_table[row_index] = row;
-  }
 }
 
 ushort fe(ushort row, byte is_white, int x, int dx)
@@ -621,24 +519,24 @@ void flip2(ref x8<byte> me, ref x8<byte> him, int x, int y)
 {
   ushort row = (ushort)(gethorz(ref me, ref him, y) & (~(256 << x)));
 
-  ushort new_row = flipt[pack_table[row]][x];
+  ushort new_row = flipt[row][x];
   puthorz(ref me, ref him, y, new_row);
 
   row = getvert(ref me, ref him, x, y);
-  new_row = flipt[pack_table[row]][y];
+  new_row = flipt[row][y];
   row |= (ushort)(256 << y);
   if (new_row != row) {
     putvert(ref me, ref him, x, new_row);
   }
 
   row = getdiag1(ref me, ref him, x, y);
-  new_row = flipt[pack_table[row]][x];
+  new_row = flipt[row][x];
   row |= (ushort)(256 << x);
   if (new_row != row)
     putdiag1(ref me, ref him, x, y, new_row);
 
   row = getdiag2(ref me, ref him, x, y);
-  new_row = flipt[pack_table[row]][x];
+  new_row = flipt[row][x];
   row |= (ushort)(256 << x);
   if (new_row != row)
     putdiag2(ref me, ref him, x, y, new_row);
@@ -1442,7 +1340,7 @@ bool valid2(ref x8<byte> me, ref x8<byte> him, byte current_depth)
       // remember me is in the high bits and him is in the low bits
       // so we place onto the high bits.  And d1 has the current bit mask
 
-      if ((row | (mask << 8)) != flipt[pack_table[row]][i]) {
+      if ((row | (mask << 8)) != flipt[row][i]) {
         push(i, y, current_depth);
         used |= mask;
         found_anything = true;
