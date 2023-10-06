@@ -41,8 +41,7 @@ extern int colour;
 extern int consecutive_passes;
 extern int turn;
 extern unsigned short edge[65536];
-extern unsigned short flipt[6561][8];
-extern unsigned short pack_table[65536];
+extern unsigned short flipt[65536][8];
 
 void display(BOARD board);
 void display_one_row(int row);

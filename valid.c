@@ -45,7 +45,7 @@ int valid(BOARD board, int colour, int current_depth)
       // piece at column i appears, then nothing flips, so it's not valid.
       // remember me is in the high bits and him is in the low bits
       // so we place onto the high bits.  And d1 has the current bit mask
-      if ((row | (mask << 8)) != flipt[pack_table[row]][i]) {
+      if ((row | (mask << 8)) != flipt[row][i]) {
         push(i, y, current_depth);
         used |= mask;
         found_anything = 1;
