@@ -2,6 +2,7 @@
 #define WHITE 1
 
 #include <assert.h>
+#include <ctype.h>
 #include <inttypes.h>
 #include <memory.h>
 #include <setjmp.h>
@@ -12,7 +13,6 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
-#include <ctype.h>
 
 typedef unsigned char BOARD[2][8];
 typedef unsigned char *LAYER;

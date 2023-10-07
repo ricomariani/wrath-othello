@@ -17,25 +17,26 @@ void load(const char *name, BOARD board) {
     board[WHITE][i] = 0;
     board[BLACK][i] = 0;
 
-    for (int j = 0; j < 8; ) {
+    for (int j = 0; j < 8;) {
       int ch = fgetc(f);
       if (ch == EOF) {
         printf("wrath: Unable to parse input board\n");
         exit(1);
       }
-  
-      if (isspace((unsigned char)ch)) continue;
+
+      if (isspace((unsigned char)ch))
+        continue;
 
       switch (ch) {
 
       case 'B':
       case 'b':
-        board[BLACK][i] |= 1<<j;
+        board[BLACK][i] |= 1 << j;
         break;
 
       case 'W':
       case 'w':
-        board[WHITE][i] |= 1<<j;
+        board[WHITE][i] |= 1 << j;
         break;
 
       case '-':
@@ -58,7 +59,8 @@ void load(const char *name, BOARD board) {
       exit(1);
     }
 
-    if (isspace((unsigned char)ch)) continue;
+    if (isspace((unsigned char)ch))
+      continue;
 
     switch (ch) {
     case 'w':
@@ -78,7 +80,7 @@ void load(const char *name, BOARD board) {
     }
 
     printf("Picking up where we left off... %s to play\n",
-          is_white_turn ? "White" : "Black");
+           is_white_turn ? "White" : "Black");
     break;
   }
 }

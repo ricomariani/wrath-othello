@@ -14,7 +14,7 @@ char BoardCharAt(BOARD board, int x, int y) {
 // the values are 0 empty, 1 black and 2 white just like the ascii table above
 // this is used only for display
 char RowCharAt(int row, int x) {
-   return ascii_values[((row >> (8 + x)) & 1) + 2 * ((row >> x) & 1)];
+  return ascii_values[((row >> (8 + x)) & 1) + 2 * ((row >> x) & 1)];
 }
 
 // draw all the rows of the board
