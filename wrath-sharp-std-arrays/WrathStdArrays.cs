@@ -23,29 +23,29 @@ readonly byte WHITE = 1;
 
 // this gives the value of an edge
 // you hace to flip the vertical bits
-static x65536<ushort> edge;
+static ushort[] edge = new ushort[65536];
 
 // flipt[row][x] tell us how to flip
 // the row if we place a piece on
 // the given row, in column x.  You have
 // to extract the columns and diagonals
 // to use this elsewhere
-static x65536<x8<ushort>> flipt;
+static ushort[,] flipt = new ushort[65536,8];
 
 // This tells us how many bits are set
 // in this byte.  Useful for endgame
 // scoring and current score display.
-static x256<byte> bit_count;
+static byte[] bit_count = new byte[256];
 
 // this gives the value of a row I own
 // in the middle of the board (not the edges)
-static x256<byte> weighted_row_value;
+static byte[] weighted_row_value = new byte[256];
 
 // This has the bit numbers lie 0x05 encodes to 0xc8
 // one nibble encodes each bit position the high bit is set
 // to make the nibble non-zero if there is a bit there
 // so you can read out the bits with &7 then >>4
-static x256<ulong> bit_values;
+static ulong[] bit_values = new ulong[256];
 
 public class TimeoutException : Exception
 {
@@ -54,66 +54,45 @@ public class TimeoutException : Exception
     }
 }
 
-[InlineArray(6561)]
-struct x6561<T> {
-  public T _0;
-}
-
-[InlineArray(65536)]
-struct x65536<T> {
-  public T _0;
-}
-
-[InlineArray(256)]
-struct x256<T> {
-  public T _0;
-}
-
-[InlineArray(32)]
-struct x32<T> {
-  public T _0;
-}
-
-[InlineArray(16)]
-struct x16<T> {
-  public T _0;
-}
-
-[InlineArray(8)]
-struct x8<T> {
-  public T _0;
-}
-
-[InlineArray(2)]
-struct x2<T> {
-  public T _0;
-}
-
-struct BOARD {
-  public x2<x8<byte>> data;
+class BOARD {
+  int n;
+  public byte[] w;
+  public byte[] b;
 
   public BOARD() {
+     w = new byte[8];
+     b = new byte[8];
+  }
+
+  public BOARD clone() {
+    var brd = storedBoards[n+1];
+    brd.n = n+1;
+    Array.Copy(this.w, brd.w, 8);
+    Array.Copy(this.b, brd.b, 8);
+    return brd;
   }
 
   public byte get(byte is_white, int j) {
-    return data[is_white & 1][j&7];
+    return (is_white != 0 ? w : b)[j];
   }
 
   public void put(byte is_white, int j, byte val) {
-    data[is_white & 1][j&7] = val;
+    (is_white != 0 ? w : b)[j] = val;
   }
 
-  public x8<byte> half(byte is_white) {
-    return data[is_white & 1];
+  public byte[] half(byte is_white) {
+    return is_white != 0 ? w : b;
   }
 }
+
+static BOARD[] storedBoards = new BOARD[32];
 
 
 // the computer provides "input" for the next move
 // it's done uniformly like this so that the logic for
 // player vs. computer is basically the same as computer
 // vs. itself.
-void computer_input(ref BOARD board, byte is_white)
+void computer_input(BOARD board, byte is_white)
 {
   byte x, y;
   int score = search(board, is_white, out x, out y);
@@ -127,13 +106,13 @@ void computer_input(ref BOARD board, byte is_white)
     Console.WriteLine("best move for {0} is at {1}{2} (score {3})", is_white != 0 ? 'W' : 'B',
            (char)(x + 'a'), (char)('8' - y), score - score_bias);
 
-    move(ref board, is_white, x, y);
+    move(board, is_white, x, y);
     consecutive_passes = 0;
   }
 }
 
 // here we ask the user what they want to do.
-bool user_input(ref BOARD board, byte is_white)
+bool user_input(BOARD board, byte is_white)
 {
 again:;
   // user input x and y
@@ -144,7 +123,7 @@ again:;
 
   // recompute the valid moves and put them on the stack
   // they go on stack number INITIAL_DEPTH (i.e. the root)
-  valid(ref board, is_white, INITIAL_DEPTH);
+  valid(board, is_white, INITIAL_DEPTH);
 
   Console.Write("Please enter a move --> ");
 
@@ -225,7 +204,7 @@ again:;
   while (pop_move(out x, out y, INITIAL_DEPTH)) {
     if (x == user_x && y == user_y) {
       Console.WriteLine("Move to {0}{1} accepted.\n", (char)(x + 'a'), (char)('8' - y));
-      move(ref board, is_white, x, y);
+      move(board, is_white, x, y);
       consecutive_passes = 0;
       return false;
     }
@@ -236,10 +215,10 @@ again:;
 }
 
 
-void move(ref BOARD board, byte is_white, int x, int y)
+void move(BOARD board, byte is_white, int x, int y)
 {
   board.put(is_white, y, (byte)(board.get(is_white, y) | (1<<x)));
-  flip(ref board, is_white, x, y);
+  flip(board, is_white, x, y);
   display(board);
 }
 
@@ -295,7 +274,7 @@ void display(BOARD board)
   Console.Write('\n');
 }
 
-BOARD initial;
+BOARD initial = new BOARD();
 
 void display_one_row(int rowbits) {
   for (int x = 0; x < 8; x++) {
@@ -406,7 +385,7 @@ int edge_recursive(ushort row)
     // no matter where you try to flip nothing happens.
     for (int i = 0; i < 8; i++) {
       // all 8 possible moves are no-op, row already full
-      flipt[row][i] = row;
+      flipt[row, i] = row;
     }
 
     return edge[row];
@@ -432,7 +411,7 @@ int edge_recursive(ushort row)
     // if this bit is already set we skip it
     if ((both & (1 << i)) != 0) {
       // but first we make this another no-op flip.
-      flipt[row_index][i] = row;
+      flipt[row_index, i] = row;
       continue;
     }
 
@@ -448,7 +427,7 @@ int edge_recursive(ushort row)
     // the flip table is normalized for black to move but
     // remember this is all me/him so in context the bits could
     // be black or white
-    flipt[row_index][i] = t;
+    flipt[row_index, i] = t;
 
     // now score the other outcome, WHITE gets the cell
     ushort t2 = row;
@@ -509,52 +488,50 @@ done:
   return (ushort)((me << 8) | him);
 }
 
-void flip(ref BOARD board, byte is_white, int x, int y)
+void flip(BOARD board, byte is_white, int x, int y)
 {
-    byte other = (byte)(1-is_white);
-    flip2(ref board.data[is_white], ref board.data[other], x, y);
-}
+  byte other = (byte)(1-is_white);
+  var me = board.half(is_white);
+  var him = board.half(other);
 
-void flip2(ref x8<byte> me, ref x8<byte> him, int x, int y)
-{
-  ushort row = (ushort)(gethorz(ref me, ref him, y) & (~(256 << x)));
+  ushort row = (ushort)(gethorz(me, him, y) & (~(256 << x)));
 
-  ushort new_row = flipt[row][x];
-  puthorz(ref me, ref him, y, new_row);
+  ushort new_row = flipt[row, x];
+  puthorz(me, him, y, new_row);
 
-  row = getvert(ref me, ref him, x, y);
-  new_row = flipt[row][y];
+  row = getvert(me, him, x, y);
+  new_row = flipt[row, y];
   row |= (ushort)(256 << y);
   if (new_row != row) {
-    putvert(ref me, ref him, x, new_row);
+    putvert(me, him, x, new_row);
   }
 
-  row = getdiag1(ref me, ref him, x, y);
-  new_row = flipt[row][x];
+  row = getdiag1(me, him, x, y);
+  new_row = flipt[row, x];
   row |= (ushort)(256 << x);
   if (new_row != row)
-    putdiag1(ref me, ref him, x, y, new_row);
+    putdiag1(me, him, x, y, new_row);
 
-  row = getdiag2(ref me, ref him, x, y);
-  new_row = flipt[row][x];
+  row = getdiag2(me, him, x, y);
+  new_row = flipt[row, x];
   row |= (ushort)(256 << x);
   if (new_row != row)
-    putdiag2(ref me, ref him, x, y, new_row);
+    putdiag2(me, him, x, y, new_row);
 
 }
 
-ushort gethorz(ref x8<byte> me, ref x8<byte> him, int y)
+ushort gethorz(byte[] me, byte[] him, int y)
 {
   return (ushort)((me[y] << 8) | him[y]);
 }
 
-void puthorz(ref x8<byte> me, ref x8<byte> him, int y, ushort row)
+void puthorz(byte[] me, byte[] him, int y, ushort row)
 {
   me[y] = (byte)(row >> 8);
   him[y] = (byte)(row & 0xff);
 }
 
-ushort getvert(ref x8<byte> me, ref x8<byte> him, int x, int y)
+ushort getvert(byte[] me, byte[] him, int x, int y)
 {
   ushort row = 0;
   ushort mask = (ushort)(1 << x);
@@ -566,7 +543,7 @@ ushort getvert(ref x8<byte> me, ref x8<byte> him, int x, int y)
   return row;
 }
 
-void putvert(ref x8<byte> me, ref x8<byte> him, int x, ushort row)
+void putvert(byte[] me, byte[] him, int x, ushort row)
 {
   byte hi = (byte)(row >> 8);
   byte mask = 1;
@@ -589,7 +566,7 @@ void putvert(ref x8<byte> me, ref x8<byte> him, int x, ushort row)
   }
 }
 
-ushort getdiag1(ref x8<byte> me, ref x8<byte> him, int x, int y)
+ushort getdiag1(byte[] me, byte[] him, int x, int y)
 {
   int i, d;
 
@@ -606,7 +583,7 @@ ushort getdiag1(ref x8<byte> me, ref x8<byte> him, int x, int y)
   return row;
 }
 
-void putdiag1(ref x8<byte> me, ref x8<byte> him, int x, int y, int row)
+void putdiag1(byte[] me, byte[] him, int x, int y, int row)
 {
   int d = y - x;
   byte hi = (byte)(row >> 8);
@@ -632,7 +609,7 @@ void putdiag1(ref x8<byte> me, ref x8<byte> him, int x, int y, int row)
   }
 }
 
-ushort getdiag2(ref x8<byte> me, ref x8<byte> him, int x, int y)
+ushort getdiag2(byte[] me, byte[] him, int x, int y)
 {
   int d = y + x;
 
@@ -647,7 +624,7 @@ ushort getdiag2(ref x8<byte> me, ref x8<byte> him, int x, int y)
   return row;
 }
 
-void putdiag2(ref x8<byte> me, ref x8<byte> him, int x, int y, ushort row)
+void putdiag2(byte[] me, byte[] him, int x, int y, ushort row)
 {
   int d = y + x;
   byte hi = (byte)(row >> 8);
@@ -683,10 +660,15 @@ public void Begin(string[] args)
 {
   Console.WriteLine("Framework Version: {0}", Environment.Version);
 
-  initial.data[1][3] = (byte)0x10;
-  initial.data[1][4] = (byte)0x08;
-  initial.data[0][3] = (byte)0x08;
-  initial.data[0][4] = (byte)0x10;
+  for (int i = 0; i < 32; i++) {
+     storedBoards[i] = new BOARD();
+     stacks[i] = new Stack();
+  }
+
+  initial.w[3] = (byte)0x10;
+  initial.w[4] = (byte)0x08;
+  initial.b[3] = (byte)0x08;
+  initial.b[4] = (byte)0x10;
 
   build_tables();
 
@@ -742,9 +724,9 @@ public void Begin(string[] args)
   // repeat play until there are two passes, alternating color
   while (consecutive_passes < 2) {
     if (player && is_white_turn == player_is_white)
-      user_input(ref initial, is_white_turn);
+      user_input(initial, is_white_turn);
     else
-      computer_input(ref initial, is_white_turn);
+      computer_input(initial, is_white_turn);
 
     display_score(initial);
     is_white_turn = (byte)(1 -is_white_turn);
@@ -858,7 +840,11 @@ BOARD load(string name)
 // We keep moves we are considering here, this is for holding the next set of valid moves
 class Stack {
   public byte top;
-  public x32<ushort> xy;
+  public ushort[] xy;
+
+  public Stack() {
+    xy = new ushort[32];
+  }
 }
 
 // these are all the stacks we will ever need, no malloc
@@ -977,7 +963,7 @@ int search(BOARD board, byte is_white, out byte bestx, out byte besty)
   stopwatch.Start();
 
   try {
-    found_anything = valid(ref board, is_white, start);
+    found_anything = valid(board, is_white, start);
     if (!found_anything) {
       bx = 0xff;
       by = 0xff;
@@ -1011,6 +997,7 @@ int search(BOARD board, byte is_white, out byte bestx, out byte besty)
   stopwatch.Stop();
 
   double duration = stopwatch.ElapsedMilliseconds / 1000.0;
+  if (duration == 0.0) { duration= 0.001; }
   total_time += duration;
 
   Console.Write("\nEvaluated {0:N0} boards in ", boards);
@@ -1026,8 +1013,8 @@ int search(BOARD board, byte is_white, out byte bestx, out byte besty)
 int score(BOARD board, byte is_white)
 {
   byte other = (byte)(1-is_white);
-  x8<byte> me = board.half(is_white);
-  x8<byte> him = board.half(other);
+  var me = board.half(is_white);
+  var him = board.half(other);
 
   int s = 0;
 
@@ -1077,15 +1064,16 @@ int rsearch(BOARD board, byte is_white, byte depth, int lvl)
   reset_scored_moves(1 - lvl);
   searching_to_end = false;
 
+
   if (!remove_scored_move(out x, out y, lvl)) {
     return 0;
   }
 
   Console.Write("{0}{1}=", (char)(x + 'a'), (char)('8' - y));
-  var brd = board;
-  flip(ref brd, is_white, x, y);
+  var brd = board.clone();
+  flip(brd, is_white, x, y);
 
-  bs = mini(ref brd, other, (byte)(depth - 1), HORRIBLE, GREAT);
+  bs = mini(brd, other, (byte)(depth - 1), HORRIBLE, GREAT);
   bx = x;
   by = y;
   Console.Write("{0}  ", bs - ((turn > ENDGAME) ? 0 : SCORE_BIAS));
@@ -1094,9 +1082,9 @@ int rsearch(BOARD board, byte is_white, byte depth, int lvl)
 
   while (remove_scored_move(out x, out y, lvl)) {
     Console.Write("{0}{1}", (char)(x + 'a'), (char)('8' - y));
-    brd = board;
-    flip(ref brd, is_white, x, y);
-    sc = mini(ref brd, other, (byte)(depth - 1), bs, GREAT);
+    brd = board.clone();
+    flip(brd, is_white, x, y);
+    sc = mini(brd, other, (byte)(depth - 1), bs, GREAT);
     insert_scored_move(x, y, sc, 1-lvl);
     if (sc > bs) {
       Console.Write('=');
@@ -1127,9 +1115,11 @@ struct scored_move {
 class scored_move_list {
   public byte _put; // the number we put in
   public byte _get; // the one to get next
-  public x32<scored_move> moves;
+  public scored_move[] moves;
 
-  public scored_move_list() { }
+  public scored_move_list() { 
+    moves = new scored_move[32];
+  }
 };
 
 // we alternate between two
@@ -1170,9 +1160,7 @@ void insert_scored_move(byte x, byte y, int score, int lvl)
     }
   }
 
-  i &= 31;
   for (int j = l._put; j > i; j--) {
-    j &= 31;
     l.moves[j] = l.moves[j-1];
   }
 
@@ -1202,7 +1190,7 @@ bool remove_scored_move(out byte x, out byte y, int lvl)
 
 
 // minimax search with alpha beta pruning
-int mini(ref BOARD board, byte is_white, byte depth, int a, int b)
+int mini(BOARD board, byte is_white, byte depth, int a, int b)
 {
   byte other = (byte)(1-is_white);
   if (IRQ) {
@@ -1216,13 +1204,13 @@ int mini(ref BOARD board, byte is_white, byte depth, int a, int b)
     int sc;
     reset_move_stack(depth);
 
-    bool found_anything = valid(ref board, is_white, depth);
+    bool found_anything = valid(board, is_white, depth);
     if (!found_anything) {
       if (turn > ENDGAME && !searching_to_end) {
         searching_to_end = true;
-        sc = maxi(ref board, other, (byte)(depth + 1), a, b);
+        sc = maxi(board, other, (byte)(depth + 1), a, b);
       } else {
-        sc = maxi(ref board, other, (byte)(depth - 1), a, b);
+        sc = maxi(board, other, (byte)(depth - 1), a, b);
       }
       return sc;
     }
@@ -1231,9 +1219,9 @@ int mini(ref BOARD board, byte is_white, byte depth, int a, int b)
     byte x;
     byte y;
     while (pop_move(out x, out y, depth)) {
-      var brd = board;
-      flip(ref brd, is_white, x, y);
-      sc = maxi(ref brd, other, (byte)(depth - 1), a, b);
+      var brd = board.clone();
+      flip(brd, is_white, x, y);
+      sc = maxi(brd, other, (byte)(depth - 1), a, b);
 
       // in this pass we're minning the maxes
       if (sc < b) {
@@ -1255,7 +1243,7 @@ int mini(ref BOARD board, byte is_white, byte depth, int a, int b)
   }
 }
 
-int maxi(ref BOARD board, byte is_white, byte depth, int a, int b)
+int maxi(BOARD board, byte is_white, byte depth, int a, int b)
 {
   byte other = (byte)(1-is_white);
 
@@ -1269,13 +1257,13 @@ int maxi(ref BOARD board, byte is_white, byte depth, int a, int b)
     int sc;
     reset_move_stack(depth);
 
-    bool found_anything = valid(ref board, is_white, depth);
+    bool found_anything = valid(board, is_white, depth);
     if (!found_anything) {
       if (turn > ENDGAME && !searching_to_end) {
         searching_to_end = true;
-        sc = mini(ref board, other, (byte)(depth + 1), a, b);
+        sc = mini(board, other, (byte)(depth + 1), a, b);
       } else {
-        sc = mini(ref board, other, (byte)(depth - 1), a, b);
+        sc = mini(board, other, (byte)(depth - 1), a, b);
       }
       return sc;
     }
@@ -1284,9 +1272,9 @@ int maxi(ref BOARD board, byte is_white, byte depth, int a, int b)
     byte x;
     byte y;
     while (pop_move(out x, out y, depth)) {
-      var brd = board;
-      flip(ref brd, is_white, x, y);
-      sc = mini(ref brd, other, (byte)(depth - 1), a, b);
+      var brd = board.clone();
+      flip(brd, is_white, x, y);
+      sc = mini(brd, other, (byte)(depth - 1), a, b);
 
       // in this pass we're maxxing the mins
       if (sc > a) {
@@ -1307,14 +1295,13 @@ int maxi(ref BOARD board, byte is_white, byte depth, int a, int b)
   }
 }
 
-bool valid(ref BOARD board, byte is_white, byte current_depth) {
-  return valid2(ref board.data[is_white & 1], ref board.data[1 & (byte)(1-is_white)], current_depth);
-}
-
 // the current depth just tell us which stack to put the valid moves on
 // the stacks are all pre-allocated so there is no malloc
-bool valid2(ref x8<byte> me, ref x8<byte> him, byte current_depth)
-{
+bool valid(BOARD board, byte is_white, byte current_depth) {
+  byte other = (byte)(1-is_white);
+  var me = board.half(is_white);
+  var him = board.half(other);
+
   reset_move_stack(current_depth);
   bool found_anything = false;
 
@@ -1340,7 +1327,7 @@ bool valid2(ref x8<byte> me, ref x8<byte> him, byte current_depth)
       // remember me is in the high bits and him is in the low bits
       // so we place onto the high bits.  And d1 has the current bit mask
 
-      if ((row | (mask << 8)) != flipt[row][i]) {
+      if ((row | (mask << 8)) != flipt[row, i]) {
         push(i, y, current_depth);
         used |= mask;
         found_anything = true;
