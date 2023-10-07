@@ -5,16 +5,16 @@
 
 // the current depth just tell us which stack to put the valid moves on
 // the stacks are all pre-allocated so there is no malloc
-int valid(BOARD board, int colour, int current_depth) {
+int valid(BOARD board, int is_white, int current_depth) {
   // we put the board in a sea of zeros so we can go off either
   // end with impunity
 
   uint64_t words[5];
 
   words[0] = 0;
-  words[1] = *(uint64_t *)&board[colour][0];
+  words[1] = *(uint64_t *)&board[is_white][0];
   words[2] = 0;
-  words[3] = *(uint64_t *)&board[!colour][0];
+  words[3] = *(uint64_t *)&board[!is_white][0];
   words[4] = 0;
 
   uint8_t *me = (uint8_t *)(&words[0]);

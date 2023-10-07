@@ -12,9 +12,9 @@ static int limit;
 static int IRQ;
 
 static void bcpy(BOARD b1, BOARD b2);
-static int rsearch(BOARD board, int colour, int depth, int lvl);
-static int maxi(BOARD board, int colour, int depth, int a, int b);
-static int mini(BOARD board, int colour, int depth, int a, int b);
+static int rsearch(BOARD board, int is_white, int depth, int lvl);
+static int maxi(BOARD board, int is_white, int depth, int a, int b);
+static int mini(BOARD board, int is_white, int depth, int a, int b);
 
 static void timeout(int signum) { IRQ = 1; }
 
@@ -35,7 +35,7 @@ static void print_duration(double duration) {
   printf("%d:%02d.%03d", minutes, seconds, millis);
 }
 
-int search(BOARD board, int colour, int *bestx, int *besty) {
+int search(BOARD board, int is_white, int *bestx, int *besty) {
   int i, start, lvl, moves;
 
   signal(SIGALRM, timeout);
@@ -111,7 +111,7 @@ int search(BOARD board, int colour, int *bestx, int *besty) {
   }
 
   // if we have no moves... we have to pass
-  if (!(moves = valid(board, colour, start))) {
+  if (!(moves = valid(board, is_white, start))) {
     bx = -1;
     by = -1;
     bs = HORRIBLE;
@@ -140,7 +140,7 @@ int search(BOARD board, int colour, int *bestx, int *besty) {
   for (i = start; i < 65; i += 2) {
     printf("%2d: ", i);
     fflush(stdout);
-    rsearch(board, colour, i, lvl);
+    rsearch(board, is_white, i, lvl);
     if (i + 2 > 64 - turn)
       break;
     lvl = !lvl;
@@ -153,7 +153,7 @@ no_moves:
 }
 
 // This sets up the real search, one real search
-static int rsearch(BOARD board, int colour, int depth, int lvl) {
+static int rsearch(BOARD board, int is_white, int depth, int lvl) {
   int x, y, sc;
   BOARD brd;
   int moves;
@@ -173,14 +173,14 @@ static int rsearch(BOARD board, int colour, int depth, int lvl) {
   printf("%c%c=", x + 'a', '8' - y);
   fflush(stdout);
   bcpy(brd, board);
-  flip(brd, colour, x, y);
+  flip(brd, is_white, x, y);
 
   // we get the score by looking at the worst outcome
   // for us, the mini in minimax.  The alpha beta
   // pruning starts with no cap -- HORRIBLE, GREAT
   // we're building up the moves in the new sorted
   // order for the next deeper pass.
-  bs = mini(brd, !colour, depth - 1, HORRIBLE, GREAT);
+  bs = mini(brd, !is_white, depth - 1, HORRIBLE, GREAT);
   bx = x;
   by = y;
   printf("%d  ", bs - ((turn > ENDGAME) ? 0 : SCORE_BIAS));
@@ -193,8 +193,8 @@ static int rsearch(BOARD board, int colour, int depth, int lvl) {
     printf("%c%c", x + 'a', '8' - y);
     fflush(stdout);
     bcpy(brd, board);
-    flip(brd, colour, x, y);
-    sc = mini(brd, !colour, depth - 1, bs, GREAT);
+    flip(brd, is_white, x, y);
+    sc = mini(brd, !is_white, depth - 1, bs, GREAT);
 
     // re-insert this move on the other sorted list
     // print xx=nn if this is a new best score
@@ -221,14 +221,14 @@ static int rsearch(BOARD board, int colour, int depth, int lvl) {
 
 // this is the mini part of minimax.  We're going to pick
 // the worst score here (subject to alpha/beta pruning)
-static int mini(BOARD board, int colour, int depth, int a, int b) {
+static int mini(BOARD board, int is_white, int depth, int a, int b) {
   if (IRQ)
     longjmp(env, 1);
   boards++;
 
   // if we get to the bottom of the recursion, use the scoring function
   if (!depth)
-    return score(board, colour);
+    return score(board, is_white);
   else {
     BOARD brd;
     int x, y, sc;
@@ -236,7 +236,7 @@ static int mini(BOARD board, int colour, int depth, int a, int b) {
     // clear any moves in this stack and compute new valid moves
     reset_move_stack(depth);
 
-    int found_anything = valid(board, colour, depth);
+    int found_anything = valid(board, is_white, depth);
     if (!found_anything) {
       // this means there are no moves, we have to pass
 
@@ -248,11 +248,11 @@ static int mini(BOARD board, int colour, int depth, int a, int b) {
         // This is imperfect because there could be more passes
         // along the way... oh well.  Room for improvement.
         searching_to_end = 1;
-        sc = maxi(board, !colour, depth + 1, a, b);
+        sc = maxi(board, !is_white, depth + 1, a, b);
       } else {
         // normal case, just keep scoring from here
         // we don't give ourselves a penalty for passing
-        sc = maxi(board, !colour, depth - 1, a, b);
+        sc = maxi(board, !is_white, depth - 1, a, b);
       }
       return sc;
     }
@@ -262,8 +262,8 @@ static int mini(BOARD board, int colour, int depth, int a, int b) {
     // so we take the worst of the best
     while (pop_move(&x, &y, depth)) {
       bcpy(brd, board);
-      flip(brd, colour, x, y);
-      sc = maxi(brd, !colour, depth - 1, a, b);
+      flip(brd, is_white, x, y);
+      sc = maxi(brd, !is_white, depth - 1, a, b);
       // in this pass we're minning the maxes
       if (sc < b) {
         // so this says we found a new min
@@ -287,14 +287,14 @@ static int mini(BOARD board, int colour, int depth, int a, int b) {
 
 // this is the maxi part of minimax.  We're going to pick
 // the best score here (subject to alpha/beta pruning)
-static int maxi(BOARD board, int colour, int depth, int a, int b) {
+static int maxi(BOARD board, int is_white, int depth, int a, int b) {
   if (IRQ)
     longjmp(env, 1);
   boards++;
 
   // if we get to the bottom of the recursion, use the scoring function
   if (!depth)
-    return score(board, colour);
+    return score(board, is_white);
   else {
     BOARD brd;
     int x, y, sc;
@@ -302,7 +302,7 @@ static int maxi(BOARD board, int colour, int depth, int a, int b) {
     // clear any moves in this stack and compute new valid moves
     reset_move_stack(depth);
 
-    int found_anything = valid(board, colour, depth);
+    int found_anything = valid(board, is_white, depth);
     if (!found_anything) {
       // this means there are no moves, we have to pass
 
@@ -314,11 +314,11 @@ static int maxi(BOARD board, int colour, int depth, int a, int b) {
         // This is imperfect because there could be more passes
         // along the way... oh well.  Room for improvement.
         searching_to_end = 1;
-        sc = mini(board, !colour, depth + 1, a, b);
+        sc = mini(board, !is_white, depth + 1, a, b);
       } else {
         // normal case, just keep scoring from here
         // we don't give ourselves a penalty for passing
-        sc = mini(board, !colour, depth - 1, a, b);
+        sc = mini(board, !is_white, depth - 1, a, b);
       }
       return sc;
     }
@@ -328,8 +328,8 @@ static int maxi(BOARD board, int colour, int depth, int a, int b) {
     // so we take the best of the worst
     while (pop_move(&x, &y, depth)) {
       bcpy(brd, board);
-      flip(brd, colour, x, y);
-      sc = mini(brd, !colour, depth - 1, a, b);
+      flip(brd, is_white, x, y);
+      sc = mini(brd, !is_white, depth - 1, a, b);
       // in this pass we're maxxing the mins
       if (sc > a) {
         // so this says we found a new max
@@ -351,9 +351,9 @@ static int maxi(BOARD board, int colour, int depth, int a, int b) {
 
 static void bcpy(BOARD b1, BOARD b2) { memcpy(b1, b2, sizeof(BOARD)); }
 
-void move(BOARD board, int colour, int x, int y) {
-  board[colour][y] |= (1 << x);
-  flip(board, colour, x, y);
+void move(BOARD board, int is_white, int x, int y) {
+  board[is_white][y] |= (1 << x);
+  flip(board, is_white, x, y);
   display(board);
 }
 

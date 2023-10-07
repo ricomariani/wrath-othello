@@ -37,7 +37,7 @@ extern uint64_t bit_values[256];
 extern char weighted_row_value[256];
 extern char bit_count[256];
 extern char weighted_row_value[256];
-extern int colour;
+extern int is_white_turn;
 extern int consecutive_passes;
 extern int turn;
 extern unsigned short edge[65536];
@@ -54,9 +54,9 @@ void reset_scored_moves(int lvl);
 void insert_scored_move(int x, int y, int score, int lvl);
 int remove_scored_move(int *x, int *y, int lvl);
 
-int valid(BOARD board, int colour, int stack);
-void flip(BOARD board, int colour, int x, int y);
-void move(BOARD board, int colour, int x, int y);
+int valid(BOARD board, int is_white, int stack);
+void flip(BOARD board, int is_white, int x, int y);
+void move(BOARD board, int is_white, int x, int y);
 
 void safe_gets(char *buf, int len);
 int save();
@@ -65,13 +65,13 @@ void reset_move_stack(int lvl);
 void push(int x, int y, int lvl);
 int pop_move(int *x, int *y, int lvl);
 
-unsigned fe(unsigned mask, int colour, int x, int dx);
+unsigned fe(unsigned mask, int is_white, int x, int dx);
 
-void computer_input(BOARD board, int colour);
-int user_input(BOARD board, int colour);
+void computer_input(BOARD board, int is_white);
+int user_input(BOARD board, int is_white);
 
-int search(BOARD board, int colour, int *bestx, int *besty);
-void move(BOARD board, int colour, int x, int y);
+int search(BOARD board, int is_white, int *bestx, int *besty);
+void move(BOARD board, int is_white, int x, int y);
 
 void display(BOARD board);
 void display_one_row(int rowbits);
@@ -80,4 +80,4 @@ void display_score(BOARD board);
 void build_tables(void);
 
 void load(const char *name, BOARD board);
-int score(BOARD board, int colour);
+int score(BOARD board, int is_white);

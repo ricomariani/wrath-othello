@@ -6,7 +6,7 @@ char bit_count[256];
 char weighted_row_value[256];
 int turn;
 int consecutive_passes;
-int colour = 1;
+int is_white_turn = 1;
 uint64_t bit_values[256];
 
 static int test_mode = 0;
@@ -88,13 +88,13 @@ int main(int argc, char **argv) {
 
   // repeat play until there are two passes, alternating color
   while (consecutive_passes < 2) {
-    if (player && colour == play_side)
-      user_input(initial, colour);
+    if (player && is_white_turn == play_side)
+      user_input(initial, is_white_turn);
     else
-      computer_input(initial, colour);
+      computer_input(initial, is_white_turn);
 
     display_score(initial);
-    colour = !colour;
+    is_white_turn = !is_white_turn;
 
     if (test_mode) {
       printf("test complete\n");

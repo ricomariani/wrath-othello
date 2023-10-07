@@ -15,12 +15,12 @@ static int getdiag2(unsigned char *me, unsigned char *him, int x, int y);
 static void putdiag2(unsigned char *me, unsigned char *him, int x, int y,
                      int row);
 
-void flip(BOARD board, int colour, int x, int y) {
+void flip(BOARD board, int is_white, int x, int y) {
   unsigned char *me, *him;
   unsigned short row, new;
 
-  me = &board[colour][0];
-  him = &board[!colour][0];
+  me = &board[is_white][0];
+  him = &board[!is_white][0];
 
   row = gethorz(me, him, y) & (~(256 << x));
   new = flipt[row][x];

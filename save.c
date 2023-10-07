@@ -48,7 +48,7 @@ int save() {
     fputc('\n', f);
   }
   putc('\n', f);
-  fprintf(f, "%c to play\n", colour ? 'w' : 'b');
+  fprintf(f, "%c to play\n", is_white_turn ? 'w' : 'b');
   fclose(f);
   return 0;
 }

@@ -3,7 +3,7 @@
 #define INITIAL_DEPTH 0
 
 // here we ask the user what they want to do.
-int user_input(BOARD board, int colour) {
+int user_input(BOARD board, int is_white) {
 again:;
   // user input x and y
   int user_x = -1;
@@ -14,7 +14,7 @@ again:;
 
   // recompute the valid moves and put them on the stack
   // they go on stack number INITIAL_DEPTH (i.e. the root)
-  valid(board, colour, INITIAL_DEPTH);
+  valid(board, is_white, INITIAL_DEPTH);
 
   printf("Please enter a move --> ");
   fflush(stdout);
@@ -97,7 +97,7 @@ again:;
     if (x == user_x && y == user_y) {
       printf("Move to %c%c accepted.\n", x + 'a', '8' - y);
       fflush(stdout);
-      move(board, colour, x, y);
+      move(board, is_white, x, y);
       consecutive_passes = 0;
       return 0;
     }

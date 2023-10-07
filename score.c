@@ -1,12 +1,12 @@
 #include "board.h"
 
-int score(BOARD board, int colour) {
+int score(BOARD board, int is_white) {
   int i, s;
   unsigned int t;
   unsigned char *me, *him;
 
-  me = &board[colour][0];
-  him = &board[!colour][0];
+  me = &board[is_white][0];
+  him = &board[!is_white][0];
 
   t = s = 0;
   if (turn > ENDGAME) {

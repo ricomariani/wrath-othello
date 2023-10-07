@@ -63,12 +63,12 @@ void load(const char *name, BOARD board) {
     switch (ch) {
     case 'w':
     case 'W':
-      colour = WHITE;
+      is_white_turn = 1;
       break;
 
     case 'b':
     case 'B':
-      colour = BLACK;
+      is_white_turn = 0;
       break;
 
     default:
@@ -78,7 +78,7 @@ void load(const char *name, BOARD board) {
     }
 
     printf("Picking up where we left off... %s to play\n",
-          colour ? "White" : "Black");
+          is_white_turn ? "White" : "Black");
     break;
   }
 }
