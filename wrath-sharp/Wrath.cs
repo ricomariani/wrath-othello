@@ -751,6 +751,22 @@ public void Begin(string[] args)
   }
 }
 
+// Produces this:
+//
+// - - B B - W - -
+// B - B B B B - B
+// B B W W W W B B
+// B W B W W B W B
+// - W W B B W W -
+// W W W W W W W W
+// - - - W B B - -
+// - - W - B B - -
+//
+// b to play
+//
+// Which is useful because it's super easy to make one by hand
+// The "load" function reads this same format.
+// Returns true if the save aborted.
 bool save()
 {
   Console.Write("filename (press return to abort): ");

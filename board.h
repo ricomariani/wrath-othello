@@ -12,6 +12,7 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <ctype.h>
 
 typedef unsigned char BOARD[2][8];
 typedef unsigned char *LAYER;
@@ -31,7 +32,6 @@ typedef unsigned char *LAYER;
 #define SCORE_BIAS 8187
 
 extern BOARD initial;
-extern char ascii_values[];
 extern char bit_count[256];
 extern uint64_t bit_values[256];
 extern char weighted_row_value[256];
@@ -46,6 +46,9 @@ extern unsigned short flipt[65536][8];
 void display(BOARD board);
 void display_one_row(int row);
 void display_score(BOARD board);
+
+char BoardCharAt(BOARD board, int x, int y);
+char RowCharAt(int row, int x);
 
 void reset_scored_moves(int lvl);
 void insert_scored_move(int x, int y, int score, int lvl);

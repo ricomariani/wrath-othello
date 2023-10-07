@@ -1,12 +1,6 @@
 #include "board.h"
 
-#define INDEX(board, x, y) (!!((board)[y] & (1 << (x))))
-#define RINDEX(board, x) (!!((board) & (1 << (x))))
-#define TYPE(board, x, y)                                                      \
-  (INDEX((board)[0], x, y) + (INDEX((board)[1], x, y) << 1))
-#define RTYPE(board, x)                                                        \
-  (RINDEX((board >> 8), x) + (RINDEX((board)&0xff, x) << 1))
-
+// I grew up in a world where you could call gets and it was ok
 void safe_gets(char *buf, int len) {
   char *result = fgets(buf, len, stdin);
   if (result) {
@@ -17,6 +11,22 @@ void safe_gets(char *buf, int len) {
   }
 }
 
+// Produces this:
+//
+// - - B B - W - -
+// B - B B B B - B
+// B B W W W W B B
+// B W B W W B W B
+// - W W B B W W -
+// W W W W W W W W
+// - - - W B B - -
+// - - W - B B - -
+//
+// b to play
+//
+// Which is useful because it's super easy to make one by hand
+// The "load" function reads this same format.
+// Returns true if the save aborted.
 int save() {
   char name[80];
 
@@ -32,7 +42,7 @@ int save() {
 
   for (int y = 0; y < 8; y++) {
     for (int x = 0; x < 8; x++) {
-      putc(ascii_values[TYPE(initial, x, y)], f);
+      putc(BoardCharAt(initial, x, y), f);
       putc(' ', f);
     }
     fputc('\n', f);
@@ -44,6 +54,7 @@ int save() {
 }
 
 // once used as the ^C handler
+// it isn't wired in anymore but it could be
 static void catch () {
   char confirm[100];
 

@@ -2,22 +2,20 @@
 
 char ascii_values[] = "-BW?";
 
-// This is true or false if the bit is set in the row for one color
-#define RINDEX(rowbits, x) (!!((rowbits) & (1 << (x))))
-
-// this get the row out of the given board (black or white) and then is true
-// if that board has a bit at x, y
-#define INDEX(rows, x, y) RINDEX((rows)[y], x)
-
 // this gets the type of the row board[0] is black and board[1] is white
-#define TYPE(board, x, y)                                                      \
-  (INDEX((board)[0], x, y) + (INDEX((board)[1], x, y) << 1))
+// this is used only for display
+char BoardCharAt(BOARD board, int x, int y) {
+  int i1 = (board[0][y] >> x) & 1;
+  int i2 = (board[1][y] >> x) & 1;
+  return ascii_values[i1 + (i2 << 1)];
+}
 
-// here rowbits has a single row, black is the high bits and white is the low
-// bits the values are 0 empty, 1 black and 2 white just like the ascii table
-// above
-#define RTYPE(rowbits, x)                                                      \
-  (RINDEX((rowbits >> 8), x) + (RINDEX((rowbits)&0xff, x) << 1))
+// here row has a single row, black is the high bits and white is the low bits
+// the values are 0 empty, 1 black and 2 white just like the ascii table above
+// this is used only for display
+char RowCharAt(int row, int x) {
+   return ascii_values[((row >> (8 + x)) & 1) + 2 * ((row >> x) & 1)];
+}
 
 // draw all the rows of the board
 void display(BOARD board) {
@@ -29,12 +27,13 @@ void display(BOARD board) {
 
     // board data
     for (x = 0; x < 8; x++) {
-      putchar(ascii_values[TYPE(board, x, y)]);
+      putchar(BoardCharAt(board, x, y));
       putchar(' ');
     }
     putchar('\n');
   }
   printf("\t\t\t\t  ");
+
   // column label (letter)
   for (x = 0; x < 8; x++) {
     putchar('a' + x);
@@ -44,11 +43,10 @@ void display(BOARD board) {
   fflush(stdout);
 }
 
-void display_one_row(int rowbits) {
-  int x;
-
-  for (x = 0; x < 8; x++) {
-    putchar(ascii_values[RTYPE(rowbits, x)]);
+// this is only used for debugging
+void display_one_row(int row) {
+  for (int x = 0; x < 8; x++) {
+    putchar(RowCharAt(row, x));
   }
 
   fflush(stdout);
