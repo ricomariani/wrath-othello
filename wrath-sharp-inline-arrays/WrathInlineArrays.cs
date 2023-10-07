@@ -951,6 +951,21 @@ int search(BOARD board, byte is_white, out byte bestx, out byte besty)
   bool found_anything;
   int limit;
 
+  // This is some rudimentry time management.  It turns out
+  // that it's not very interesting to spent a lot of time
+  // thinking about the early moves.  First they don't matter
+  // much but second, in the old days the code easily got
+  // to 6 ply and had no hope of finishing 8 with even
+  // a more generous budget. So we deem it not worth it
+  // and save the seconds for later in the game when it
+  // will matter more.  We're also hoarding a big budget
+  // so that when we hit turn = ENDGAME we can search
+  // to the end without losing because we run out of time
+  // In 1987 that was about 12 ply from the end.  So
+  // turn 52.  Now we can do it at Turn 44 -- 20 ply.
+  // We also do it faster now.  It was good 10 minutes in 1987.
+  // On a modern CPU we can do the endgame search
+  // in about 90s now.
   if (turn < 15)
     limit = 2;
   else if (turn < 30)
@@ -962,6 +977,7 @@ int search(BOARD board, byte is_white, out byte bestx, out byte besty)
   searching_to_end = false;
   IRQ = false;
 
+  // arm the clock if we need to
   if (turn <= ENDGAME) {
     alarm(limit);
     start = 2;
@@ -977,6 +993,7 @@ int search(BOARD board, byte is_white, out byte bestx, out byte besty)
   stopwatch.Start();
 
   try {
+    // if we have no moves... we have to pass
     found_anything = valid(ref board, is_white, start);
     if (!found_anything) {
       bx = 0xff;
@@ -985,11 +1002,24 @@ int search(BOARD board, byte is_white, out byte bestx, out byte besty)
       goto no_moves;
     }
 
+    // if we have some moves then seed the initial move list
+    // normally we do these in order of goodness (best first)
+    // but at this point we know nothing.  It all starts at
+    // score == 0.
     reset_scored_moves(0);
     while (pop_move(out bestx, out besty, start)) {
       insert_scored_move(bestx, besty, 0, 0);
     }
 
+    // we only resort the moves in best order at the top level
+    // in principle we could do this at every level in the tree
+    // but it wasn't deemed worth it.  We seem to get good value
+    // out of our alpha/beta pruning just ordering the top
+    // level and there's the cost of all that sorting.  It might
+    // be worth it to try to order at every level some day.  For
+    // now we just have the moves from the last result and
+    // the ones we're working on, so we just need two levels of
+    // sorted moves.
     lvl = 0;
     for (byte i = start; i < 65; i += 2) {
       Console.Write("{0,2:D}: ", i);
@@ -999,6 +1029,7 @@ int search(BOARD board, byte is_white, out byte bestx, out byte besty)
       lvl = 1 - lvl; // alternate between 0 and 1
     }
 
+    // disarm the clock
     no_moves:
     alarm(0);
   }
@@ -1006,6 +1037,8 @@ int search(BOARD board, byte is_white, out byte bestx, out byte besty)
     alarm(0);
   }
 
+  // save the running best into our output
+  // compute the duration and make a little report
   bestx = bx;
   besty = by;
   stopwatch.Stop();
@@ -1077,14 +1110,24 @@ int rsearch(BOARD board, byte is_white, byte depth, int lvl)
   reset_scored_moves(1 - lvl);
   searching_to_end = false;
 
+  // this is a bit of defensive coding, this can't happen
+  // the `search` above us already checked.  We definitely
+  // have a move to consider.
   if (!remove_scored_move(out x, out y, lvl)) {
     return 0;
   }
 
+  // try the first move, this will become our working best
+  // bx and by.  The score is in bs.
   Console.Write("{0}{1}=", (char)(x + 'a'), (char)('8' - y));
   var brd = board;
   flip(ref brd, is_white, x, y);
 
+  // we get the score by looking at the worst outcome
+  // for us, the mini in minimax.  The alpha beta
+  // pruning starts with no cap -- HORRIBLE, GREAT
+  // we're building up the moves in the new sorted
+  // order for the next deeper pass.
   bs = mini(ref brd, other, (byte)(depth - 1), HORRIBLE, GREAT);
   bx = x;
   by = y;
@@ -1092,11 +1135,20 @@ int rsearch(BOARD board, byte is_white, byte depth, int lvl)
 
   insert_scored_move(x, y, bs, 1-lvl);
 
+  // grab the next scored move and start considering it
+  // we print them as we go.
   while (remove_scored_move(out x, out y, lvl)) {
     Console.Write("{0}{1}", (char)(x + 'a'), (char)('8' - y));
     brd = board;
     flip(ref brd, is_white, x, y);
     sc = mini(ref brd, other, (byte)(depth - 1), bs, GREAT);
+
+    // re-insert this move on the other sorted list
+    // print xx=nn if this is a new best score
+    // print xx<nn if it isn't.  We don't know
+    // the exact score if it's lower because it
+    // might have been pruned.  All we know for sure
+    // is that it can't be better than what we have.
     insert_scored_move(x, y, sc, 1-lvl);
     if (sc > bs) {
       Console.Write('=');
@@ -1201,7 +1253,8 @@ bool remove_scored_move(out byte x, out byte y, int lvl)
 }
 
 
-// minimax search with alpha beta pruning
+// this is the mini part of minimax.  We're going to pick
+// the worst score here (subject to alpha/beta pruning)
 int mini(ref BOARD board, byte is_white, byte depth, int a, int b)
 {
   byte other = (byte)(1-is_white);
@@ -1209,6 +1262,8 @@ int mini(ref BOARD board, byte is_white, byte depth, int a, int b)
     throw new TimeoutException("Operation timed out.");
   }
   boards++;
+
+  // if we get to the bottom of the recursion, use the scoring function
   if (depth == 0) {
     return score(board, is_white);
   }
@@ -1218,16 +1273,28 @@ int mini(ref BOARD board, byte is_white, byte depth, int a, int b)
 
     bool found_anything = valid(ref board, is_white, depth);
     if (!found_anything) {
+      // this means there are no moves, we have to pass
+
       if (turn > ENDGAME && !searching_to_end) {
+        // we're searching to the end, we had to pass
+        // so the board didn't fill in. That means the game
+        // might go one turn longer.  Continue the search
+        // with one extra level so that we get to the end still.
+        // This is imperfect because there could be more passes
+        // along the way... oh well.  Room for improvement.
         searching_to_end = true;
         sc = maxi(ref board, other, (byte)(depth + 1), a, b);
       } else {
+        // normal case, just keep scoring from here
+        // we don't give ourselves a penalty for passing
         sc = maxi(ref board, other, (byte)(depth - 1), a, b);
       }
       return sc;
     }
     searching_to_end = false;
 
+    // now process the moves, this is the mini pass
+    // so we take the worst of the best
     byte x;
     byte y;
     while (pop_move(out x, out y, depth)) {
@@ -1255,6 +1322,8 @@ int mini(ref BOARD board, byte is_white, byte depth, int a, int b)
   }
 }
 
+// this is the maxi part of minimax.  We're going to pick
+// the best score here (subject to alpha/beta pruning)
 int maxi(ref BOARD board, byte is_white, byte depth, int a, int b)
 {
   byte other = (byte)(1-is_white);
@@ -1262,6 +1331,8 @@ int maxi(ref BOARD board, byte is_white, byte depth, int a, int b)
   if (IRQ)
     throw new TimeoutException("Operation timed out.");
   boards++;
+
+  // if we get to the bottom of the recursion, use the scoring function
   if (depth == 0) {
     return score(board, is_white);
   }
@@ -1271,16 +1342,28 @@ int maxi(ref BOARD board, byte is_white, byte depth, int a, int b)
 
     bool found_anything = valid(ref board, is_white, depth);
     if (!found_anything) {
+      // this means there are no moves, we have to pass
+
       if (turn > ENDGAME && !searching_to_end) {
+        // we're searching to the end, we had to pass
+        // so the board didn't fill in. That means the game
+        // might go one turn longer.  Continue the search
+        // with one extra level so that we get to the end still.
+        // This is imperfect because there could be more passes
+        // along the way... oh well.  Room for improvement.
         searching_to_end = true;
         sc = mini(ref board, other, (byte)(depth + 1), a, b);
       } else {
+        // normal case, just keep scoring from here
+        // we don't give ourselves a penalty for passing
         sc = mini(ref board, other, (byte)(depth - 1), a, b);
       }
       return sc;
     }
     searching_to_end = false;
 
+    // now process the moves, this is the maxi pass
+    // so we take the best of the worst
     byte x;
     byte y;
     while (pop_move(out x, out y, depth)) {
