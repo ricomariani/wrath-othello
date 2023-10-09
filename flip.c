@@ -140,7 +140,7 @@ static void putdiag1(uint8_t *me, uint8_t *him, int x, int y, uint16_t row) {
 
   uint8_t mask = 1;
   for (int i = 0; i < 8; i++, mask <<= 1) {
-    // ask before consider just the right slice of the diagonal
+    // as before consider just the right slice of the diagonal
     int y_diag = i + d;
     if (y_diag < 0 || y_diag > 7)
       continue;
@@ -190,7 +190,7 @@ static void putdiag2(uint8_t *me, uint8_t *him, int x, int y, uint16_t row) {
 
   uint8_t mask = 1;
   for (int i = 0; i < 8; i++, mask <<= 1) {
-    // ask before consider just the right slice of the diagonal
+    // as before consider just the right slice of the diagonal
     int y_diag = d - i;
     if (y_diag < 0 || y_diag > 7)
       continue;
