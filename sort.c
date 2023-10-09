@@ -17,19 +17,19 @@ typedef struct {
   scored_move scored_moves[64];
 } scored_move_list;
 
-static scored_move_list slist[2];
+static scored_move_list scored_moves[2];
 
 // reset the count of scored_moves in this level
 // lvl is 0/1 corresponding to the current recursion level, it alternates
 // so we're reading off of lvl and writing onto !lvl at any moment
 void reset_scored_moves(int lvl) {
-  scored_move_list *S = &slist[lvl];
+  scored_move_list *S = &scored_moves[lvl];
   S->get = S->put = 0;
 }
 
 void insert_scored_move(int x, int y, int score, int lvl) {
   int i, j;
-  scored_move_list *S = &slist[lvl];
+  scored_move_list *S = &scored_moves[lvl];
 
   // find the place to insert this scored_move
   // stop at the first place where this score is bigger
@@ -52,7 +52,7 @@ void insert_scored_move(int x, int y, int score, int lvl) {
 }
 
 int remove_scored_move(int *x, int *y, int lvl) {
-  scored_move_list *S = &slist[lvl];
+  scored_move_list *S = &scored_moves[lvl];
 
   if (S->get >= S->put) {
     *x = *y = -1;

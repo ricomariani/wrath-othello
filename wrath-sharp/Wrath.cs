@@ -9,7 +9,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 
-class Othello {
+sealed class Othello {
 
 int turn = 0;
 int consecutive_passes = 0;
@@ -362,7 +362,7 @@ void build_tables()
   }
 
   for (int i =0; i < 2; i++) {
-    slist[i] = new scored_move_list();
+    scored_moves[i] = new scored_move_list();
   }
 
   Console.WriteLine("Building general lookup tables");
@@ -906,7 +906,7 @@ struct Xy {
 }
 
 // We keep moves we are considering here, this is for holding the next set of valid moves
-class Stack {
+sealed class Stack {
   public byte top;
   public Xy[] moves;
 
@@ -1224,7 +1224,7 @@ struct scored_move {
 // note that this list is small, like if there are 10 valid scored_moves that's a lot
 // the size is 64 because that's how many squares there are on the board
 // and that's still small but it we can't really have 64 valid scored_moves
-class scored_move_list {
+sealed class scored_move_list {
   public byte _put; // the number we put in
   public byte _get; // the one to get next
   public scored_move[] scored_moves;
@@ -1232,21 +1232,21 @@ class scored_move_list {
   public scored_move_list() { scored_moves = new scored_move[32]; }
 };
 
-scored_move_list[] slist = new scored_move_list[2];
+scored_move_list[] scored_moves = new scored_move_list[2];
 
 // reset the count of scored_moves in this level
 // lvl is 0/1 corresponding to the current recursion level, it alternates
 // so we're reading off of lvl and writing onto !lvl at any moment
 void reset_scored_moves(int lvl)
 {
-  scored_move_list S = slist[lvl];
+  scored_move_list S = scored_moves[lvl];
   S._get = S._put = 0;
 }
 
 void insert_scored_move(byte x, byte y, int score, int lvl)
 {
   int i, j;
-  var S = slist[lvl];
+  var S = scored_moves[lvl];
   var moves = S.scored_moves;
 
   // find the place to insert this scored_move
@@ -1268,7 +1268,7 @@ void insert_scored_move(byte x, byte y, int score, int lvl)
 
 bool remove_scored_move(out byte x, out byte y, int lvl)
 {
-  var S = slist[lvl];
+  var S = scored_moves[lvl];
 
   if (S._get >= S._put) {
     x = y = 0xff;

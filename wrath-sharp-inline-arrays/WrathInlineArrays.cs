@@ -9,7 +9,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 
-class Othello {
+sealed class Othello {
 
 int turn = 0;
 int consecutive_passes = 0;
@@ -904,7 +904,7 @@ BOARD load(string name)
 }
 
 // We keep moves we are considering here, this is for holding the next set of valid moves
-class Stack {
+sealed class Stack {
   public byte top;
   public x32<ushort> xy;
 }
@@ -1224,7 +1224,7 @@ struct scored_move {
 // note that this list is small, like if there are 10 valid scored_moves that's a lot
 // the size is 64 because that's how many squares there are on the board
 // and that's still small but it we can't really have 64 valid scored_moves
-class scored_move_list {
+sealed class scored_move_list {
   public byte _put; // the number we put in
   public byte _get; // the one to get next
   public x32<scored_move> moves;
@@ -1233,7 +1233,7 @@ class scored_move_list {
 };
 
 // we alternate between two
-class SList {
+sealed class SList {
   public scored_move_list a;
   public scored_move_list b;
 
