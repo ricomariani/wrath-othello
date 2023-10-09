@@ -38,13 +38,13 @@ int valid(BOARD board, int is_white, int current_depth) {
       if (initial_used & mask)
         continue;
 
-      // flipt[base_3_row_index][i] tells you what the state is of the
+      // flip_table[base_3_row_index][i] tells you what the state is of the
       // row if you were to place a piece at column i.  So this says
       // if the effect of placing a piece at column i is only that the
       // piece at column i appears, then nothing flips, so it's not valid.
       // remember me is in the high bits and him is in the low bits
       // so we place onto the high bits.  And d1 has the current bit mask
-      if ((row | (mask << 8)) != flipt[row][i]) {
+      if ((row | (mask << 8)) != flip_table[row][i]) {
         push(i, y, current_depth);
         used |= mask;
         found_anything = 1;

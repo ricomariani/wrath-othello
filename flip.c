@@ -23,23 +23,23 @@ void flip(BOARD board, int is_white, int x, int y) {
   him = &board[!is_white][0];
 
   row = gethorz(me, him, y) & (~(256 << x));
-  new = flipt[row][x];
+  new = flip_table[row][x];
   puthorz(me, him, y, new);
 
   row = getvert(me, him, x, y);
-  new = flipt[row][y];
+  new = flip_table[row][y];
   row |= (256 << y);
   if (new != row)
     putvert(me, him, x, new);
 
   row = getdiag1(me, him, x, y);
-  new = flipt[row][x];
+  new = flip_table[row][x];
   row |= (256 << x);
   if (new != row)
     putdiag1(me, him, x, y, new);
 
   row = getdiag2(me, him, x, y);
-  new = flipt[row][x];
+  new = flip_table[row][x];
   row |= (256 << x);
   if (new != row)
     putdiag2(me, him, x, y, new);

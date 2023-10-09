@@ -41,7 +41,7 @@ extern int is_white_turn;
 extern int consecutive_passes;
 extern int turn;
 extern unsigned short edge[65536];
-extern unsigned short flipt[65536][8];
+extern unsigned short flip_table[65536][8];
 
 void display(BOARD board);
 void display_one_row(int row);
@@ -65,7 +65,7 @@ void reset_move_stack(int lvl);
 void push(int x, int y, int lvl);
 int pop_move(int *x, int *y, int lvl);
 
-unsigned fe(unsigned mask, int is_white, int x, int dx);
+uint16_t flip_edge_one_way(uint16_t mask, int is_white, int x, int dx);
 
 void computer_input(BOARD board, int is_white);
 int user_input(BOARD board, int is_white);

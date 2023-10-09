@@ -1,7 +1,7 @@
 #include "board.h"
 
 unsigned short edge[65536];
-unsigned short flipt[65536][8];
+unsigned short flip_table[65536][8];
 
 static void build_lookups(void);
 static int edge_recursive(unsigned index);
@@ -45,7 +45,7 @@ static int edge_recursive(unsigned row) {
     // nothing no matter where you try to flip nothing happens.
     for (int i = 0; i < 8; i++) {
       // all 8 possible moves are no-op, row already full
-      flipt[row][i] = row;
+      flip_table[row][i] = row;
     }
 
     return edge[row];
@@ -69,7 +69,7 @@ static int edge_recursive(unsigned row) {
     // if this bit is already set we skip it
     if (both & (1 << i)) {
       // but first we make this another no-op flip.
-      flipt[row][i] = row;
+      flip_table[row][i] = row;
       continue;
     }
 
@@ -78,19 +78,19 @@ static int edge_recursive(unsigned row) {
 
     // ok we make a copy of the row and use our flip edge helper
     unsigned t = row;
-    t = fe(t, BLACK, i, 1);  // flip right
-    t = fe(t, BLACK, i, -1); // flip left
+    t = flip_edge_one_way(t, BLACK, i, 1);  // flip right
+    t = flip_edge_one_way(t, BLACK, i, -1); // flip left
 
     // record the result of flipping
     // the flip table is normalized for black to move but
     // remember this is all me/him so in context the bits could
     // be black or white
-    flipt[row][i] = t;
+    flip_table[row][i] = t;
 
     // now score the other outcome, WHITE gets the cell
     unsigned t2 = row;
-    t2 = fe(t2, WHITE, i, 1);
-    t2 = fe(t2, WHITE, i, -1);
+    t2 = flip_edge_one_way(t2, WHITE, i, 1);
+    t2 = flip_edge_one_way(t2, WHITE, i, -1);
 
     // now add the scores of the two possible outcomes to the total
     sum += edge_recursive(t) + edge_recursive(t2);

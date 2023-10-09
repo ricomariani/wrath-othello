@@ -21,7 +21,7 @@ readonly bool BLACK = false;
 readonly bool WHITE = true;
 
 ushort[] edge = new ushort[65536];
-ushort[,] flipt = new ushort[65536, 8];
+ushort[,] flip_table = new ushort[65536, 8];
 byte[] bit_count = new byte[256];
 byte[] weighted_row_value = new byte[256];
 ulong[] bit_values = new ulong[256];
@@ -407,7 +407,7 @@ int edge_recursive(ushort row)
     // no matter where you try to flip nothing happens.
     for (int i = 0; i < 8; i++) {
       // all 8 possible moves are no-op, row already full
-      flipt[row, i] = row;
+      flip_table[row, i] = row;
     }
 
     return edge[row];
@@ -430,7 +430,7 @@ int edge_recursive(ushort row)
     // if this bit is already set we skip it
     if ((both & (1 << i)) != 0) {
       // but first we make this another no-op flip.
-      flipt[row, i] = row;
+      flip_table[row, i] = row;
       continue;
     }
 
@@ -439,19 +439,19 @@ int edge_recursive(ushort row)
 
     // ok we make a copy of the row and use our flip edge helper
     ushort t = row;
-    t = fe(t, BLACK, i, 1);  // flip right
-    t = fe(t, BLACK, i, -1); // flip left
+    t = flip_edge_one_way(t, BLACK, i, 1);  // flip right
+    t = flip_edge_one_way(t, BLACK, i, -1); // flip left
 
     // record the result of flipping
     // the flip table is normalized for black to move but
     // remember this is all me/him so in context the bits could
     // be black or white
-    flipt[row, i] = t;
+    flip_table[row, i] = t;
 
     // now score the other outcome, WHITE gets the cell
     ushort t2 = row;
-    t2 = fe(t2, WHITE, i, 1);
-    t2 = fe(t2, WHITE, i, -1);
+    t2 = flip_edge_one_way(t2, WHITE, i, 1);
+    t2 = flip_edge_one_way(t2, WHITE, i, -1);
 
     // now add the scores of the two possible outcomes to the total
     sum += edge_recursive(t) + edge_recursive(t2);
@@ -462,47 +462,79 @@ int edge_recursive(ushort row)
   return edge[row];
 }
 
-ushort fe(ushort row, bool is_white, int x, int dx)
+// This helper is used to compute the overall flip table.  This is
+// just doing flips along one row in one direction.  When we do the
+// full flip we will use the table created by this on flipping row
+// directly but we will also convert the vertical and diagonal slices
+// into a virtual "row" and flip them too.  So this ends up driving
+// all the flips.  We do this so that we don't have to do the expensive
+// nested loop business for each row/column/diagonal when we really flip.
+ushort flip_edge_one_way(ushort row, bool is_white, int x, int dx)
 {
-  int i, him, me, x0;
+  byte him = (byte)row;
+  byte me = (byte)(row >> 8);
+  int x0 = x;
 
-  him = row & 0xff;
-  me = row >> 8;
-  x0 = x;
-
+  // normalize black/white to me/him
   if (is_white) {
-    i = him;
+    byte tmp = him;
     him = me;
-    me = i;
+    me = tmp;
   }
 
-  if ((him & (1 << (x + dx))) == 0)
+  // note that we do not check if the current square is unoccupied
+  // this is because there are many flip directions and any one of them
+  // may have already filled in the current square.
+
+  // if the adjacent square isn't an enemy square no flip is possible
+  // in this direction, early out.
+  if ((him >> (x + dx) & 1) == 0) {
     goto done;
+  }
 
-  for (i = 0; i < 8; i++) {
+  // loop across the board advancing x by dx, the dx exit is the one
+  // we will always take.
+  for (;;) {
     x += dx;
-    if (x < 0 || x > 7)
-      goto done;
+    if (x < 0 || x > 7) {
+      break;
+    }
 
-    if ((me & (1 << x)) != 0) {
+    // if we find our own piece there is a flip here.
+    if ((1 & (me >> x)) != 0) {
+
+      // to execute the flip we go backwards until the
+      // starting square, we remove the enemies pieces
+      // and replace them with our own pieces
       x -= dx;
       while (x != x0) {
-        me |= (1 << x);
-        him &= ~(1 << x);
+        me |= (byte)(1 << x);    // turn on me
+        him &= (byte)~(1 << x);  // turn off him
         x -= dx;
       }
-      goto done;
+
+      // we're done
+      break;
     }
-    if ((him & (1 << x)) == 0)
-      goto done;
+
+    // we can keep trying to find a flip as long as we see enemies
+    if ((1 & (him >> x)) == 0) {
+      break;
+    }
   }
 
 done:
-  me |= (1 << x0);
+  // In any case, we fill the square with our piece.  Note that we
+  // do this even though there wasn't a flip maybe because the
+  // we presume the move was valid for other reasons (maybe a flip
+  // in the other direction).  This is only half the flip.
+  me |= (byte)(1 << x0);
+
+  // swap these back for black/white
   if (is_white) {
-    i = him;
+    byte tmp = him;
     him = me;
-    me = i;
+    me = tmp;
   }
   return (ushort)((me << 8) | him);
 }
@@ -514,24 +546,24 @@ void flip(ref BOARD board, bool is_white, int x, int y)
 
   ushort row = (ushort)(gethorz(me, him, y) & (~(256 << x)));
 
-  ushort new_row = flipt[row, x];
+  ushort new_row = flip_table[row, x];
   puthorz(ref me, ref him, y, new_row);
 
   row = getvert(me, him, x, y);
-  new_row = flipt[row, y];
+  new_row = flip_table[row, y];
   row |= (ushort)(256 << y);
   if (new_row != row) {
     putvert(ref me, ref him, x, new_row);
   }
 
   row = getdiag1(me, him, x, y);
-  new_row = flipt[row, x];
+  new_row = flip_table[row, x];
   row |= (ushort)(256 << x);
   if (new_row != row)
     putdiag1(ref me, ref him, x, y, new_row);
 
   row = getdiag2(me, him, x, y);
-  new_row = flipt[row, x];
+  new_row = flip_table[row, x];
   row |= (ushort)(256 << x);
   if (new_row != row)
     putdiag2(ref me, ref him, x, y, new_row);
@@ -1414,14 +1446,14 @@ bool valid(BOARD board, bool is_white, byte current_depth)
       if ((initial_used & mask) != 0)
         continue;
 
-      // flipt[base_3_row_index][i] tells you what the state is of the
+      // flip_table[base_3_row_index][i] tells you what the state is of the
       // row if you were to place a piece at column i.  So this says
       // if the effect of placing a piece at column i is only that the
       // piece at column i appears, then nothing flips, so it's not valid.
       // remember me is in the high bits and him is in the low bits
       // so we place onto the high bits.  And d1 has the current bit mask
 
-      if ((row | (mask << 8)) != flipt[row, i]) {
+      if ((row | (mask << 8)) != flip_table[row, i]) {
         push(i, y, current_depth);
         used |= mask;
         found_anything = true;
