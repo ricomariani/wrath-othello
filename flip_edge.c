@@ -46,8 +46,8 @@ uint16_t flip_edge_one_way(uint16_t row, int is_white, int x, int dx) {
       // and replace them with our own pieces
       x -= dx;
       while (x != x0) {
-        me |= (1 << x);    // turn on me
-        him &= ~(1 << x);  // turn off him
+        me |= (1 << x);   // turn on me
+        him &= ~(1 << x); // turn off him
         x -= dx;
       }
 
