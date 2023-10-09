@@ -1233,31 +1233,31 @@ sealed class scored_move_list {
 };
 
 // we alternate between two
-sealed class SList {
+sealed class ScoredMoveSet {
   public scored_move_list a;
   public scored_move_list b;
 
-  public SList() {
+  public ScoredMoveSet() {
     a = new scored_move_list();
     b = new scored_move_list();
   }
 }
 
-SList slist = new SList();
+ScoredMoveSet scored_moves = new ScoredMoveSet();
 
 // reset the count of scored_moves in this level
 // lvl is 0/1 corresponding to the current recursion level, it alternates
 // so we're reading off of lvl and writing onto !lvl at any moment
 void reset_scored_moves(int lvl)
 {
-  scored_move_list l = lvl == 0 ? slist.a : slist.b;
+  scored_move_list l = lvl == 0 ? scored_moves.a : scored_moves.b;
   l._get = 0;
   l._put = 0;
 }
 
 void insert_scored_move(byte x, byte y, int score, int lvl)
 {
-  scored_move_list l = lvl == 0 ? slist.a : slist.b;
+  scored_move_list l = lvl == 0 ? scored_moves.a : scored_moves.b;
 
   int i;
 
@@ -1284,7 +1284,7 @@ void insert_scored_move(byte x, byte y, int score, int lvl)
 
 bool remove_scored_move(out byte x, out byte y, int lvl)
 {
-  scored_move_list l = lvl == 0 ? slist.a : slist.b;
+  scored_move_list l = lvl == 0 ? scored_moves.a : scored_moves.b;
 
   if (l._get >= l._put) {
     x = y = 0xff;
