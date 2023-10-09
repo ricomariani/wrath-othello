@@ -18,8 +18,8 @@ byte is_white_turn = 1;
 readonly int ENDGAME = 44;
 readonly int SCORE_BIAS = 8187;
 readonly byte INITIAL_DEPTH = 0;
-readonly byte BLACK = 0;
-readonly byte WHITE = 1;
+readonly bool BLACK = false;
+readonly bool WHITE = true;
 
 // this gives the value of an edge
 // you hace to flip the vertical bits
