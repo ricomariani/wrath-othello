@@ -14,16 +14,37 @@ sealed class Othello {
 int turn = 0;
 int consecutive_passes = 0;
 bool is_white_turn = true;
+
 readonly int ENDGAME = 44;
 readonly int SCORE_BIAS = 8187;
 readonly byte INITIAL_DEPTH = 0;
 readonly bool BLACK = false;
 readonly bool WHITE = true;
 
+// this gives the value of an edge
+// you have to flip the vertical bits
 ushort[] edge = new ushort[65536];
+
+// flip_table[row][x] tell us how to flip
+// the row if we place a piece on
+// the given row, in column x.  You have
+// to extract the columns and diagonals
+// to use this elsewhere
 ushort[,] flip_table = new ushort[65536, 8];
+
+// This tells us how many bits are set
+// in this byte.  Useful for endgame
+// scoring and current score display.
 byte[] bit_count = new byte[256];
+
+// this gives the value of a row I own
+// in the middle of the board (not the edges)
 byte[] weighted_row_value = new byte[256];
+
+// This has the bit numbers lie 0x05 encodes to 0xc8
+// one nibble encodes each bit position the high bit is set
+// to make the nibble non-zero if there is a bit there
+// so you can read out the bits with &7 then >>4
 ulong[] bit_values = new ulong[256];
 
 public class TimeoutException : Exception
@@ -637,6 +658,7 @@ void putvert(ref HBOARD me, ref HBOARD him, int x, ushort row)
   byte hi = (byte)(row >> 8);
   byte mask_in = 1;
   for (int i = 0; i < 8; i++, mask_in <<= 1) {
+    // either "or" in the bit, or else "~and" it out
     byte b = me.get(i);
     if ((hi & mask_in) != 0)
       b |= mask_out;
@@ -695,6 +717,7 @@ void putdiag1(ref HBOARD me, ref HBOARD him, int x, int y, ushort row)
     if (y_diag < 0 || y_diag > 7)
       continue;
 
+    // either "or" in the bit, or else "~and" it out
     byte b = me.get(y_diag);
     if ((hi & mask) != 0)
       b |= mask;
