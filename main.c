@@ -12,16 +12,17 @@ uint64_t bit_values[256];
 static int test_mode = 0;
 
 void printCompilerVersion() {
+  printf("wrath native: Compiled with: ");
 #if defined(__clang__) // Check for Clang
-  printf("Compiler: Clang Version: %d.%d.%d\n", __clang_major__,
+  printf("Clang Version: %d.%d.%d\n", __clang_major__,
          __clang_minor__, __clang_patchlevel__);
 #elif defined(__GNUC__) // Check for GCC or Clang
-  printf("Compiler: GCC (GNU C Compiler) Version: %d.%d.%d\n", __GNUC__,
+  printf("GCC (GNU C Compiler) Version: %d.%d.%d\n", __GNUC__,
          __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
 #elif defined(_MSC_VER) // Check for MSVC
-  printf("Compiler: MSVC (Microsoft Visual C++) Version: %d\n", _MSC_VER);
+  printf("MSVC (Microsoft Visual C++) Version: %d\n", _MSC_VER);
 #else
-  printf("Compiler version detection not supported for this compiler.\n");
+  printf("Version detection not supported for this compiler.\n");
 #endif
 }
 

@@ -1,0 +1,8 @@
+Be careful interepreting any of these.  I kept them becasue they were
+of interest to me but the builds varied during these runs.  The native
+compiler was not always the same (and even clang vs. gcc makes a huge
+difference).  The X64 runs were not done on machines that were heavily
+controlled.
+
+There's a lot of room for error here and it's as much a measure of
+what was happening in the code as it was edited as anything else.
