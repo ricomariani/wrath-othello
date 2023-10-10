@@ -4,5 +4,9 @@ compiler was not always the same (and even clang vs. gcc makes a huge
 difference).  The X64 runs were not done on machines that were heavily
 controlled.
 
-There's a lot of room for error here and it's as much a measure of
-what was happening in the code as it was edited as anything else.
+There's a lot of room for error here and it's as much a measure of what
+was happening in the code as it was edited as anything else.
+
+NOTE: Some of the results I cut and paste off the terminal window and
+othere were directly written into a file so the sizes are different
+because of tabs and stuff.

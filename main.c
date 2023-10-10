@@ -12,7 +12,7 @@ uint64_t bit_values[256];
 static int test_mode = 0;
 
 void printCompilerVersion() {
-  printf("wrath native: Compiled with: ");
+  printf("wrath native: compiled with ");
 #if defined(__clang__) // Check for Clang
   printf("Clang Version: %d.%d.%d\n", __clang_major__,
          __clang_minor__, __clang_patchlevel__);
