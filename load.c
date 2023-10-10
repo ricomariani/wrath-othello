@@ -24,7 +24,7 @@ void load(const char *name, BOARD board) {
         exit(1);
       }
 
-      if (isspace((unsigned char)ch))
+      if (isspace((uint8_t)ch))
         continue;
 
       switch (ch) {
@@ -59,7 +59,7 @@ void load(const char *name, BOARD board) {
       exit(1);
     }
 
-    if (isspace((unsigned char)ch))
+    if (isspace((uint8_t)ch))
       continue;
 
     switch (ch) {

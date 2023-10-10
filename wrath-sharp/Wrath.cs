@@ -362,7 +362,7 @@ void build_lookups()
       // the value of the row is the sum of the bit weights
       // for each bit that is set in that row.  So the
       // items near the end are not desireable.  The edges
-      // get no weight because there is a seperate edge table
+      // get no weight because there is a separate edge table
       // computation that determines the value of those cells.
 
       if (j > 1 && j < 6) {
@@ -459,15 +459,15 @@ int edge_recursive(ushort row)
     count += 2;
 
     // ok we make a copy of the row and use our flip edge helper
-    ushort t = row;
-    t = flip_edge_one_way(t, BLACK, i, 1);  // flip right
-    t = flip_edge_one_way(t, BLACK, i, -1); // flip left
+    ushort tmp = row;
+    tmp = flip_edge_one_way(tmp, BLACK, i, 1);  // flip right
+    tmp = flip_edge_one_way(tmp, BLACK, i, -1); // flip left
 
     // record the result of flipping
     // the flip table is normalized for black to move but
     // remember this is all me/him so in context the bits could
     // be black or white
-    flip_table[row, i] = t;
+    flip_table[row, i] = tmp;
 
     // now score the other outcome, WHITE gets the cell
     ushort t2 = row;
@@ -475,7 +475,7 @@ int edge_recursive(ushort row)
     t2 = flip_edge_one_way(t2, WHITE, i, -1);
 
     // now add the scores of the two possible outcomes to the total
-    sum += edge_recursive(t) + edge_recursive(t2);
+    sum += edge_recursive(tmp) + edge_recursive(t2);
   }
 
   // the score is the average outcome
@@ -1197,37 +1197,53 @@ int score(BOARD board, bool is_white)
   int s = 0;
 
   if (turn > ENDGAME) {
+    // endgame scoring is just the count of bits I get
+    // note that this means we don't optimize for the lowest
+    // possible enemy score which means we might not play
+    // truly perfectly. The wiggle room is that we might
+    // be able to force more empty squares with our score
+    // fixed.  This actually comes up in the game in endgame.txt    
     for (int j = 0; j < 8; j++) {
       s += bit_count[me.get(j)];
     }
     return s;
   }
 
+  // use the weighted value for the rows that are in "the middle"
   int i;
   for (i = 2; i < 6; i++) {
     s += weighted_row_value[me.get(i)];
   }
 
+  // Note that row 1 and 6 are never counted, they get zero score,
+  // except for the penalty squares below which get negative score.
+
+  // the square one position away from the corners are considered
+  // very bad indeed
   s -= bit_count[me.get(1) & 0x7e] + bit_count[me.get(6) & 0x7e] +
        ((bit_count[me.get(1) & 0x42] + bit_count[me.get(6) & 0x42]) << 2);
 
-  int t = 0;
+  // make a virtual row that consists of the last column
+  int tmp = 0;
   for (i = 0; i < 8; i++)
-    t = (t << 1) | (1 & (me.get(i) >> 7));
+    tmp = (tmp << 1) | (1 & (me.get(i) >> 7));
 
   for (i = 0; i < 8; i++) {
-    t = (t << 1) | (1 & (him.get(i) >> 7));
+    tmp = (tmp << 1) | (1 & (him.get(i) >> 7));
   }
 
-  s += edge[t];
+  // add the edge score
+  s += edge[tmp];
 
-  t = 0;
+  // make a virtual row that consists of the first column
+  tmp = 0;
   for (i = 0; i < 8; i++)
-    t = (t << 1) | (me.get(i) & 1);
+    tmp = (tmp << 1) | (me.get(i) & 1);
   for (i = 0; i < 8; i++)
-    t = (t << 1) | (him.get(i) & 1);
+    tmp = (tmp << 1) | (him.get(i) & 1);
 
-  s += edge[t] + edge[(me.get(0) << 8) | him.get(0)] + edge[(me.get(7) << 8) | him.get(7)];
+  // add the edge scores of the column plus first and last row
+  s += edge[tmp] + edge[(me.get(0) << 8) | him.get(0)] + edge[(me.get(7) << 8) | him.get(7)];
 
   return s;
 }

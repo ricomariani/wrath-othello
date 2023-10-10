@@ -77,15 +77,15 @@ static int edge_recursive(unsigned row) {
     count += 2;
 
     // ok we make a copy of the row and use our flip edge helper
-    unsigned t = row;
-    t = flip_edge_one_way(t, BLACK, i, 1);  // flip right
-    t = flip_edge_one_way(t, BLACK, i, -1); // flip left
+    unsigned tmp = row;
+    tmp = flip_edge_one_way(tmp, BLACK, i, 1);  // flip right
+    tmp = flip_edge_one_way(tmp, BLACK, i, -1); // flip left
 
     // record the result of flipping
     // the flip table is normalized for black to move but
     // remember this is all me/him so in context the bits could
     // be black or white
-    flip_table[row][i] = t;
+    flip_table[row][i] = tmp;
 
     // now score the other outcome, WHITE gets the cell
     unsigned t2 = row;
@@ -93,7 +93,7 @@ static int edge_recursive(unsigned row) {
     t2 = flip_edge_one_way(t2, WHITE, i, -1);
 
     // now add the scores of the two possible outcomes to the total
-    sum += edge_recursive(t) + edge_recursive(t2);
+    sum += edge_recursive(tmp) + edge_recursive(t2);
   }
 
   // the score is the average outcome
@@ -118,7 +118,7 @@ static void build_lookups() {
       // the value of the row is the sum of the bit weights
       // for each bit that is set in that row.  So the
       // items near the end are not desireable.  The edges
-      // get no weight because there is a seperate edge table
+      // get no weight because there is a separate edge table
       // computation that determines the value of those cells.
 
       if (j > 1 && j < 6)

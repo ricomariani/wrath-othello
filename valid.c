@@ -1,8 +1,5 @@
 #include "board.h"
 
-#define touint8_t(x) ((unsigned char)(x))
-#define load_state(a, b, c) ((touint8_t(a) << 16) | (touint8_t(b) << 8) | touint8_t(c))
-
 // the current depth just tell us which stack to put the valid moves on
 // the stacks are all pre-allocated so there is no malloc
 int valid(BOARD board, int is_white, int current_depth) {

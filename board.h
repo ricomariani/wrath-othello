@@ -14,8 +14,7 @@
 #include <time.h>
 #include <unistd.h>
 
-typedef unsigned char BOARD[2][8];
-typedef unsigned char *LAYER;
+typedef uint8_t BOARD[2][8];
 
 // At move 44 (below) we will seek to the end of the game (20 ply)
 // This takes about 90 seconds on a modern processor.  It used to take
