@@ -1,0 +1,271 @@
+[azureuser@ricomariani-perf-2 wrath-othello]$ ./bench-all.sh
+native benchmark (the control)
+Compiler: Clang Version: 15.0.7
+Give me about thirty seconds to build up my tables please
+Building general lookup tables
+Building edge table
+Computation complete
+Picking up where we left off... Black to play
+                                8 - - B B - W - -
+                                7 B - B B B B - B
+                                6 B B W W W W B B
+                                5 B W B W W B W B
+                                4 - W W B B W W -
+                                3 W W W W W W W W
+                                2 - - - W B B - -
+                                1 - - W - B B - -
+                                  a b c d e f g h
+                                                    Score: W=23 B=22
+Seeking to end of board
+20: d1=33  h2<33  g2<33  b2<33  a2<33  c2<33  h4<33  a4<33  g7=34  b7<34
+
+Evaluated 1,474,559,545 boards in 1:38.448 (14,977,947 boards/sec).  Total time used: 1:38.448
+best move for B is at g7 (score 34)
+                                8 - - B B - W - -
+                                7 B - B B B B B B
+                                6 B B W W W B B B
+                                5 B W B W B B W B
+                                4 - W W B B W W -
+                                3 W W W W W W W W
+                                2 - - - W B B - -
+                                1 - - W - B B - -
+                                  a b c d e f g h
+                                                    Score: W=21 B=25
+test complete
+wrath sharp on .NET 6.0 using Vector128
+Framework Version: 6.0.22
+Building general lookup tables
+Building edge table
+Computation complete
+Picking up where we left off... Black to play
+                                8 - - B B - W - -
+                                7 B - B B B B - B
+                                6 B B W W W W B B
+                                5 B W B W W B W B
+                                4 - W W B B W W -
+                                3 W W W W W W W W
+                                2 - - - W B B - -
+                                1 - - W - B B - -
+                                  a b c d e f g h
+                                                    Score: W23 B=22
+Seeking to end of board
+
+20: d1=33  h2<33  g2<33  b2<33  a2<33  c2<33  h4<33  a4<33  g7=34  b7<34
+
+Evaluated 1,474,559,545 boards in 8:35.102 2,862,649 boards/sec  Total time used: 8:35.102
+best move for B is at g7 (score 34)
+                                8 - - B B - W - -
+                                7 B - B B B B B B
+                                6 B B W W W B B B
+                                5 B W B W B B W B
+                                4 - W W B B W W -
+                                3 W W W W W W W W
+                                2 - - - W B B - -
+                                1 - - W - B B - -
+                                  a b c d e f g h
+                                                    Score: W21 B=25
+test complete
+
+wrath sharp on .NET 7.0 using Vector128
+Framework Version: 7.0.11
+Building general lookup tables
+Building edge table
+Computation complete
+Picking up where we left off... Black to play
+                                8 - - B B - W - -
+                                7 B - B B B B - B
+                                6 B B W W W W B B
+                                5 B W B W W B W B
+                                4 - W W B B W W -
+                                3 W W W W W W W W
+                                2 - - - W B B - -
+                                1 - - W - B B - -
+                                  a b c d e f g h
+                                                    Score: W23 B=22
+Seeking to end of board
+
+20: d1=33  h2<33  g2<33  b2<33  a2<33  c2<33  h4<33  a4<33  g7=34  b7<34
+
+Evaluated 1,474,559,545 boards in 8:13.615 2,987,260 boards/sec  Total time used: 8:13.615
+best move for B is at g7 (score 34)
+                                8 - - B B - W - -
+                                7 B - B B B B B B
+                                6 B B W W W B B B
+                                5 B W B W B B W B
+                                4 - W W B B W W -
+                                3 W W W W W W W W
+                                2 - - - W B B - -
+                                1 - - W - B B - -
+                                  a b c d e f g h
+                                                    Score: W21 B=25
+test complete
+
+wrath sharp on .NET 8.0 using Vector128
+Framework Version: 8.0.0
+Building general lookup tables
+Building edge table
+Computation complete
+Picking up where we left off... Black to play
+                                8 - - B B - W - -
+                                7 B - B B B B - B
+                                6 B B W W W W B B
+                                5 B W B W W B W B
+                                4 - W W B B W W -
+                                3 W W W W W W W W
+                                2 - - - W B B - -
+                                1 - - W - B B - -
+                                  a b c d e f g h
+                                                    Score: W23 B=22
+Seeking to end of board
+
+20: d1=33  h2<33  g2<33  b2<33  a2<33  c2<33  h4<33  a4<33  g7=34  b7<34
+
+Evaluated 1,474,559,545 boards in 7:49.516 3,140,594 boards/sec  Total time used: 7:49.516
+best move for B is at g7 (score 34)
+                                8 - - B B - W - -
+                                7 B - B B B B B B
+                                6 B B W W W B B B
+                                5 B W B W B B W B
+                                4 - W W B B W W -
+                                3 W W W W W W W W
+                                2 - - - W B B - -
+                                1 - - W - B B - -
+                                  a b c d e f g h
+                                                    Score: W21 B=25
+test complete
+
+wrath sharp on .NET 8.0 using inline arrays
+Framework Version: 8.0.0
+Building general lookup tables
+Building edge table
+Computation complete
+Picking up where we left off... Black to play
+                                8 - - B B - W - -
+                                7 B - B B B B - B
+                                6 B B W W W W B B
+                                5 B W B W W B W B
+                                4 - W W B B W W -
+                                3 W W W W W W W W
+                                2 - - - W B B - -
+                                1 - - W - B B - -
+                                  a b c d e f g h
+                                                    Score: W23 B=22
+Seeking to end of board
+
+20: d1=33  h2<33  g2<33  b2<33  a2<33  c2<33  h4<33  a4<33  g7=34  b7<34
+
+Evaluated 1,474,559,545 boards in 2:23.164 10,299,720 boards/sec  Total time used: 2:23.164
+best move for B is at g7 (score 34)
+                                8 - - B B - W - -
+                                7 B - B B B B B B
+                                6 B B W W W B B B
+                                5 B W B W B B W B
+                                4 - W W B B W W -
+                                3 W W W W W W W W
+                                2 - - - W B B - -
+                                1 - - W - B B - -
+                                  a b c d e f g h
+                                                    Score: W21 B=25
+test complete
+
+wrath sharp on .NET 6.0 standard arrays
+Framework Version: 6.0.22
+Building general lookup tables
+Building edge table
+Computation complete
+Picking up where we left off... Black to play
+                                8 - - B B - W - -
+                                7 B - B B B B - B
+                                6 B B W W W W B B
+                                5 B W B W W B W B
+                                4 - W W B B W W -
+                                3 W W W W W W W W
+                                2 - - - W B B - -
+                                1 - - W - B B - -
+                                  a b c d e f g h
+                                                    Score: W23 B=22
+Seeking to end of board
+
+20: d1=33  h2<33  g2<33  b2<33  a2<33  c2<33  h4<33  a4<33  g7=34  b7<34
+
+Evaluated 1,474,559,545 boards in 3:22.331 7,287,821 boards/sec  Total time used: 3:22.331
+best move for B is at g7 (score 34)
+                                8 - - B B - W - -
+                                7 B - B B B B B B
+                                6 B B W W W B B B
+                                5 B W B W B B W B
+                                4 - W W B B W W -
+                                3 W W W W W W W W
+                                2 - - - W B B - -
+                                1 - - W - B B - -
+                                  a b c d e f g h
+                                                    Score: W21 B=25
+test complete
+
+wrath sharp on .NET 7.0 standard arrays
+Framework Version: 7.0.11
+Building general lookup tables
+Building edge table
+Computation complete
+Picking up where we left off... Black to play
+                                8 - - B B - W - -
+                                7 B - B B B B - B
+                                6 B B W W W W B B
+                                5 B W B W W B W B
+                                4 - W W B B W W -
+                                3 W W W W W W W W
+                                2 - - - W B B - -
+                                1 - - W - B B - -
+                                  a b c d e f g h
+                                                    Score: W23 B=22
+Seeking to end of board
+
+20: d1=33  h2<33  g2<33  b2<33  a2<33  c2<33  h4<33  a4<33  g7=34  b7<34
+
+Evaluated 1,474,559,545 boards in 3:17.001 7,485,035 boards/sec  Total time used: 3:17.001
+best move for B is at g7 (score 34)
+                                8 - - B B - W - -
+                                7 B - B B B B B B
+                                6 B B W W W B B B
+                                5 B W B W B B W B
+                                4 - W W B B W W -
+                                3 W W W W W W W W
+                                2 - - - W B B - -
+                                1 - - W - B B - -
+                                  a b c d e f g h
+                                                    Score: W21 B=25
+test complete
+
+wrath sharp on .NET 8.0 standard arrays
+Framework Version: 8.0.0
+Building general lookup tables
+Building edge table
+Computation complete
+Picking up where we left off... Black to play
+                                8 - - B B - W - -
+                                7 B - B B B B - B
+                                6 B B W W W W B B
+                                5 B W B W W B W B
+                                4 - W W B B W W -
+                                3 W W W W W W W W
+                                2 - - - W B B - -
+                                1 - - W - B B - -
+                                  a b c d e f g h
+                                                    Score: W23 B=22
+Seeking to end of board
+
+20: d1=33  h2<33  g2<33  b2<33  a2<33  c2<33  h4<33  a4<33  g7=34  b7<34
+
+Evaluated 1,474,559,545 boards in 2:41.187 9,148,072 boards/sec  Total time used: 2:41.187
+best move for B is at g7 (score 34)
+                                8 - - B B - W - -
+                                7 B - B B B B B B
+                                6 B B W W W B B B
+                                5 B W B W B B W B
+                                4 - W W B B W W -
+                                3 W W W W W W W W
+                                2 - - - W B B - -
+                                1 - - W - B B - -
+                                  a b c d e f g h
+                                                    Score: W21 B=25
+test complete
