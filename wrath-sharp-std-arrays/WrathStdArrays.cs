@@ -22,7 +22,7 @@ readonly bool BLACK = false;
 readonly bool WHITE = true;
 
 // this gives the value of an edge
-// you hace to flip the vertical bits
+// you have to flip the vertical bits
 static ushort[] edge = new ushort[65536];
 
 // flip_table[row][x] tell us how to flip
@@ -520,101 +520,142 @@ done:
   return (ushort)((me << 8) | him);
 }
 
+// This does the actually flipping needed if a piece is placed at x, y
+// We do not validate that it is legal to do so, that has already
+// happened.
 void flip(BOARD board, byte is_white, int x, int y)
 {
+  // normalize black/white to me/him as usual, convert to ref
   byte other = (byte)(1-is_white);
   var me = board.half(is_white);
   var him = board.half(other);
 
-  ushort row = (ushort)(gethorz(me, him, y) & (~(256 << x)));
+  // extract the bits for horizontal flipping and apply the flip table
+  // Note that the flip table assumes the target square (x, y) is empty
+  // so all the helpers normalize to empty.  We might be mid-flip
+  // in the late phases and the "move" step already set the bits
+  // (this could be changed by tweaking how we build flip_table)
+  ushort row = gethorz(me, him, x, y);
 
   ushort new_row = flip_table[row, x];
   puthorz(me, him, y, new_row);
 
+  // pull the vertical bits into a "row" and flip it, then put it back
   row = getvert(me, him, x, y);
   new_row = flip_table[row, y];
-  row |= (ushort)(256 << y);
+
+  // it's expensive to write vertical, so don't do it if nothing changed
+  // remember we normalize back to "the square is filled by me" to do
+  // this test.  
+  row |= (ushort)(0x100 << y);
   if (new_row != row) {
     putvert(me, him, x, new_row);
   }
 
+  // now the first diagonal direction (x and y both increasing)
+  // same optimization
   row = getdiag1(me, him, x, y);
   new_row = flip_table[row, x];
-  row |= (ushort)(256 << x);
+  row |= (ushort)(0x100 << x);
   if (new_row != row)
     putdiag1(me, him, x, y, new_row);
 
+  // finally the second diagonal direction (x increasing and y decreasing)
+  // same optimization
   row = getdiag2(me, him, x, y);
   new_row = flip_table[row, x];
   row |= (ushort)(256 << x);
   if (new_row != row)
     putdiag2(me, him, x, y, new_row);
-
 }
 
-ushort gethorz(byte[] me, byte[] him, int y)
+ushort gethorz(byte[] me, byte[] him, int x, int y)
 {
-  return (ushort)((me[y] << 8) | him[y]);
+  // pull the row out in the usual way and strip the "me" bit at column x
+  // normalize to x, y OFF
+  return (ushort)(((me[y] << 8) | him[y]) & ~(0x100 << x));
 }
 
 void puthorz(byte[] me, byte[] him, int y, ushort row)
 {
+  // super easy to put horizontal row back
   me[y] = (byte)(row >> 8);
   him[y] = (byte)(row & 0xff);
 }
 
 ushort getvert(byte[] me, byte[] him, int x, int y)
 {
+  // we're going to read out this column in me and him
+  byte mask_in = (byte)(1 << x);
+
+  // these are the starting output bits
+  ushort mask_me = 0x100;
+  ushort mask_him = 1;
   ushort row = 0;
-  ushort mask = (ushort)(1 << x);
-  for (int i = 0; i < 8; i++) {
-    row |= (ushort)(((( me[i] & mask)) != 0 ? 1 : 0) << (i + 8));
-    row |= (ushort)((((him[i] & mask)) != 0 ? 1 : 0) << i);
+  for (int i = 0; i < 8; i++, mask_me <<= 1, mask_him <<= 1) {
+    // written this way because it should compile nicely into conditional select
+    // with no actual branches.  Pull out the mask bit and spread it across the
+    // virtual "row"
+    row |= (ushort)(((me[i] & mask_in) != 0) ? mask_me : 0);
+    row |= (ushort)(((him[i] & mask_in) != 0) ? mask_him : 0);
   }
-  row &= (ushort)~(1 << (y + 8));
-  return row;
+
+  // normalize to x, y OFF
+  return (ushort)(row & ~(0x100 << y));
 }
 
 void putvert(byte[] me, byte[] him, int x, ushort row)
 {
+  // this time we will write out the x column so that it matches the
+  // bits the row, reversing what getvert does.
+  byte mask_out = (byte)((1 << x));
   byte hi = (byte)(row >> 8);
-  byte mask = 1;
-  byte mx = (byte)((1 << x));
-
-  for (int i = 0; i < 8; i++, mask <<= 1) {
+  byte mask_in = 1;
+  for (int i = 0; i < 8; i++, mask_in <<= 1) {
+    // either "or" in the bit, or else "~and" it out
     byte b = me[i];
-    if ((hi & mask) != 0)
-      b |= mx;
+    if ((hi & mask_in) != 0)
+      b |= mask_out;
     else
-      b &= (byte)~mx;
+      b &= (byte)~mask_out;
     me[i] = b;
 
     b = him[i];
-    if ((row & mask) != 0)
-      b |= mx;
+    if ((row & mask_in) != 0)
+      b |= mask_out;
     else
-      b &= (byte)~mx;
+      b &= (byte)~mask_out;
     him[i] = b;
   }
 }
 
 ushort getdiag1(byte[] me, byte[] him, int x, int y)
 {
-  int i, d;
-
-  d = y - x;
-
+  int d = y - x;
+  byte mask = 1;
   ushort row = 0;
-  for (i = 0; i < 8; i++) {
-    if (i + d < 0 || i + d > 7)
+  for (int i = 0; i < 8; i++, mask <<= 1) {
+    int y_diag = i + d;
+
+    // We only pull in the fragment of the row from the diagonal that makes
+    // sense. We have to do this because of course all the diagonals are shorter
+    // except 1. Note that extra blanks at the end of the row cannot create new
+    // legal flips so skipping those bits always works
+    if (y_diag < 0 || y_diag  > 7)
       continue;
 
-    row |= (ushort)(((me[i + d] >> i) & 1) << (i + 8) | ((him[i + d] >> i) & 1) << i);
+    // merge in the appropriate column from the appropriate row
+    // mask and y_diag do exactly this...  me bits go in the high byte.
+    row |= (ushort)(((me[y_diag] & mask) << 8) | (him[y_diag] & mask));
+
   }
-  row &= (ushort)~(1 << (x + 8));
+  // normalize to x, y OFF
+  row &= (ushort)~(0x100 << x);
   return row;
 }
 
+
+// write back the first diagonal, this is where y goes up when x goes up
 void putdiag1(byte[] me, byte[] him, int x, int y, int row)
 {
   int d = y - x;
@@ -622,37 +663,51 @@ void putdiag1(byte[] me, byte[] him, int x, int y, int row)
 
   byte mask = 1;
   for (int i = 0; i < 8; i++, mask <<= 1) {
-    if ((i + d) < 0 || (i + d) > 7)
+    // as before consider just the right slice of the diagonal
+    int y_diag = i + d;
+    if (y_diag < 0 || y_diag > 7)
       continue;
 
-    byte b = me[i + d];
+    // either "or" in the bit, or else "~and" it out
+    byte b = me[y_diag];
     if ((hi & mask) != 0)
       b |= mask;
     else
       b &= (byte)~mask;
-    me[i + d] = b;
+    me[y_diag] = b;
 
-    b = him[i + d];
+    b = him[y_diag];
     if ((row & mask) != 0)
       b |= mask;
     else
       b &= (byte)~mask;
-    him[i + d] = b;
+    him[y_diag] = b;
   }
 }
 
+// get the second diagonal, this is where y goes down when x goes up
 ushort getdiag2(byte[] me, byte[] him, int x, int y)
 {
   int d = y + x;
 
   ushort row = 0;
-  for (int i = 0; i < 8; i++) {
-    if ((d - i) < 0 || (d - i) > 7)
+  int mask = 1;
+  for (int i = 0; i < 8; i++, mask <<= 1) {
+    int y_diag = d - i;
+
+    // We only pull in the fragment of the row from the diagonal that makes
+    // sense. We have to do this because of course all the diagonals are shorter
+    // except 1. Note that extra blanks at the end of the row cannot create new
+    // legal flips so skipping those bits always works
+    if (y_diag < 0 || y_diag > 7)
       continue;
 
-    row |= (ushort)(((me[d - i] >> i) & 1) << (i + 8) | ((him[d - i] >> i) & 1) << i);
+    // merge in the appropriate column from the appropriate row
+    // mask and y_diag do exactly this...  me bits go in the high byte.
+    row |= (ushort)(((me[y_diag] & mask) << 8) | (him[y_diag] & mask));
   }
-  row &= (ushort)~(1 << (x + 8));
+  // normalize to x, y OFF
+  row &= (ushort)~(0x100 << x);
   return row;
 }
 
@@ -662,22 +717,25 @@ void putdiag2(byte[] me, byte[] him, int x, int y, ushort row)
   byte hi = (byte)(row >> 8);
   byte mask = 1;
   for (int i = 0; i < 8; i++, mask <<= 1) {
-    if ((d - i) < 0 || (d - i) > 7)
+    // as before consider just the right slice of the diagonal
+    int y_diag = d - i;
+    if (y_diag < 0 || y_diag > 7)
       continue;
 
-    byte b = me[d - i];
+    // either "or" in the bit, or else "~and" it out
+    byte b = me[y_diag];
     if ((hi & mask) != 0)
       b |= mask;
     else
       b &= (byte)~mask;
-    me[d - i] = b;
+    me[y_diag] = b;
 
-    b = him[d - i];
+    b = him[y_diag];
     if ((row & mask) != 0)
       b |= mask;
     else
       b &= (byte)~mask;
-    him[d - i] = b;
+    him[y_diag] = b;
   }
 }
 

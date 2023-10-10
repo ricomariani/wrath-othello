@@ -596,7 +596,7 @@ ushort gethorz(ref x8<byte> me, ref x8<byte> him, int x, int y)
 {
   // pull the row out in the usual way and strip the "me" bit at column x
   // normalize to x, y OFF
-  return (ushort)(((me[y] << 8) | him[y]) & ~(0x100 << x));;
+  return (ushort)(((me[y] << 8) | him[y]) & ~(0x100 << x));
 }
 
 void puthorz(ref x8<byte> me, ref x8<byte> him, int y, ushort row)
@@ -655,13 +655,10 @@ void putvert(ref x8<byte> me, ref x8<byte> him, int x, ushort row)
 // get the first diagonal, this is where y goes up when x goes up
 ushort getdiag1(ref x8<byte> me, ref x8<byte> him, int x, int y)
 {
-  int i, d;
-
-  d = y - x;
-
+  int d = y - x;
   byte mask = 1;
   ushort row = 0;
-  for (i = 0; i < 8; i++, mask <<= 1) {
+  for (int i = 0; i < 8; i++, mask <<= 1) {
     int y_diag = i + d;
 
     // We only pull in the fragment of the row from the diagonal that makes
@@ -679,7 +676,6 @@ ushort getdiag1(ref x8<byte> me, ref x8<byte> him, int x, int y)
   // normalize to x, y OFF
   row &= (ushort)~(0x100 << x);
   return row;
-
 }
 
 // write back the first diagonal, this is where y goes up when x goes up
