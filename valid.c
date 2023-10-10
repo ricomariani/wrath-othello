@@ -1,41 +1,30 @@
 #include "board.h"
 
-#define tobyte(x) ((unsigned char)(x))
-#define load_state(a, b, c) ((tobyte(a) << 16) | (tobyte(b) << 8) | tobyte(c))
+#define touint8_t(x) ((unsigned char)(x))
+#define load_state(a, b, c) ((touint8_t(a) << 16) | (touint8_t(b) << 8) | touint8_t(c))
 
 // the current depth just tell us which stack to put the valid moves on
 // the stacks are all pre-allocated so there is no malloc
 int valid(BOARD board, int is_white, int current_depth) {
-  // we put the board in a sea of zeros so we can go off either
-  // end with impunity
-
-  uint64_t words[5];
-
-  words[0] = 0;
-  words[1] = *(uint64_t *)&board[is_white][0];
-  words[2] = 0;
-  words[3] = *(uint64_t *)&board[!is_white][0];
-  words[4] = 0;
-
-  uint8_t *me = (uint8_t *)(&words[0]);
-  uint8_t *him = (uint8_t *)(&words[2]);
+  uint8_t *me = &board[is_white][0];
+  uint8_t *him = &board[!is_white][0];
 
   reset_move_stack(current_depth);
   int found_anything = 0;
 
-  for (int y = 0; y < 8; y++) {
-    unsigned row = (me[8 + y] << 8) | him[8 + y];
-    unsigned char used = (row | (row >> 8));
+  for (uint8_t y = 0; y < 8; y++) {
+    ushort row = (ushort)((me[y] << 8) | him[y]);
+    uint8_t used = (uint8_t)(row | (row >> 8));
 
     // already full on this row, nothing to do
     if (used == 0xff)
       continue;
 
-    unsigned initial_used = used;
-    unsigned mask = 1;
-    for (int i = 0; i < 8; i++, mask <<= 1) {
+    uint8_t initial_used = used;
+    uint8_t mask = 1;
+    for (uint8_t i = 0; i < 8; i++, mask <<= 1) {
       // if the current spot is occupied, skip it, no valid move here
-      if (initial_used & mask)
+      if ((initial_used & mask) != 0)
         continue;
 
       // flip_table[base_3_row_index][i] tells you what the state is of the
@@ -44,6 +33,7 @@ int valid(BOARD board, int is_white, int current_depth) {
       // piece at column i appears, then nothing flips, so it's not valid.
       // remember me is in the high bits and him is in the low bits
       // so we place onto the high bits.  And d1 has the current bit mask
+
       if ((row | (mask << 8)) != flip_table[row][i]) {
         push(i, y, current_depth);
         used |= mask;
@@ -129,52 +119,55 @@ int valid(BOARD board, int is_white, int current_depth) {
     // I'm writing this comment 36 years after I wrote this code
     // and I'm stunned that it worked out on the first go...
 
-    uint64_t y0 = 0;
-    uint64_t y1 = load_state(used, used, used);
-    y1 |= y1 << 32;
 
-    for (int i = 1; i < 8; i++) {
-      int index = 8 + y;
-      int up = index + i; // we can go off the end
-      int down = index - i;
+    // all used bits start in state 2 -> no match found
+    // we never leave state 2 (see above)
+    uint32_t y0 = 0;
+    uint32_t y1 = used | (used << 8) | (used << 16);
 
-      uint64_t up_d0, up_d1, down_d0, down_d1, d;
+    for (int i = y - 1; i >= 0; i--) {
+      uint8_t h = him[i];
+      uint8_t m = me[i];
+      uint32_t d0 = ((uint8_t)(h >> (y-i)) << 16) | ((uint8_t)(h << (y-i)) << 8) | h;
+      uint32_t d1 = ((uint8_t)(m >> (y-i)) << 16) | ((uint8_t)(m << (y-i)) << 8) | m;
 
-      d = him[up];
-      up_d0 = load_state(d >> i, d << i, d);
-      d = me[up];
-      up_d1 = load_state(d >> i, d << i, d);
-      d = him[down];
-      down_d0 = load_state(d >> i, d << i, d);
-      d = me[down];
-      down_d1 = load_state(d >> i, d << i, d);
-
-      uint64_t d0 = (up_d0 << 32) | down_d0;
-      uint64_t d1 = (up_d1 << 32) | down_d1;
-
-      // state machine logic see above
-      y0 = ((~y1) & d0) | (y0 & (y1 | d1));
-      y1 |= d1 | (~d0);
-
-      // when y1 is set the computation is finished either way, if they are all
-      // finished then we can bail out.
-      if ((~y1) == 0)
-        break;
+      y0 = (~y1 & d0)  | (y0 & (y1|d1));
+      y1 |= d1 | ~d0;
+      if (0 == ~y1) break;
     }
-    // read out: state 3 is valid move
+
     y0 &= y1;
-    y0 |= y0 >> 32;
-    y0 |= y0 >> 16;
     y0 |= y0 >> 8;
-    row = y0 & 0xff;
+    y0 |= y0 >> 8;
+    uint8_t found = y0;
+    uint8_t used2 = used | found;
+
+    y1 = used2 | (used2 << 8) | (used2 << 16);
+    y0 = 0;
+    for (int i = y + 1;i < 8; i++) {
+      uint8_t h = him[i];
+      uint8_t m = me[i];
+      uint32_t d0 = ((uint8_t)(h >> (i-y)) << 16) | ((uint8_t)(h << (i-y)) << 8) | h;
+      uint32_t d1 = ((uint8_t)(m >> (i-y)) << 16) | ((uint8_t)(m << (i-y)) << 8) | m;
+
+      y0 = (~y1 & d0)  | (y0 & (y1|d1));
+      y1 |= d1 | ~d0;
+      if (0 == ~y1) break;
+    }
+
+    y0 &= y1;
+    y0 |= y0 >> 8;
+    y0 |= y0 >> 8;
+    found |= y0;
+    found &= ~used;
 
     // bit_values has one bit number in each nibble
     // this saves us from looking for all 8 bits
     // when often there is only 1 bit set
-    if (row) {
-      uint64_t bits = bit_values[row];
-      while (bits) {
-        int x = (int)(bits & 0x7);
+    if (found != 0) {
+      ulong bits = bit_values[found];
+      while (bits != 0) {
+        uint8_t x = (uint8_t)(bits & 0x7);
         bits >>= 4;
         push(x, y, current_depth);
         found_anything = 1;
@@ -184,3 +177,4 @@ int valid(BOARD board, int is_white, int current_depth) {
 
   return found_anything;
 }
+
