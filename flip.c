@@ -59,7 +59,7 @@ void flip(BOARD board, int is_white, int x, int y) {
 static uint16_t gethorz(uint8_t *me, uint8_t *him, int x, int y) {
   // pull the row out in the usual way and strip the "me" bit at column x
   // normalize to x, y OFF
-  return (me[y] << 8) | (him[y]) & ~(0x100 << x);
+  return ((me[y] << 8) | (him[y])) & ~(0x100 << x);
 }
 
 static void puthorz(uint8_t *me, uint8_t *him, int y, uint16_t row) {
