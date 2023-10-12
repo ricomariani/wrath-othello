@@ -962,7 +962,7 @@ void reset_move_stack(int lvl)
 }
 
 // each next valid move at this recursion level is pushed on its own stack
-void push(byte x, byte y, int lvl) {
+void push_move(byte x, byte y, int lvl) {
   // this % business is here to avoid array bounds checks
   // there can't be more than 32 moves and there can't be more than 32 ply searches
   // as it is 20 ply takes minutes and 21 ply would take an hour... 32 ply is not
@@ -1533,7 +1533,7 @@ bool valid(BOARD board, byte is_white, byte current_depth) {
       // so we place onto the high bits.  And d1 has the current bit mask
 
       if ((row | (mask << 8)) != flip_table[row, i]) {
-        push(i, y, current_depth);
+        push_move(i, y, current_depth);
         used |= mask;
         found_anything = true;
       }
@@ -1666,7 +1666,7 @@ bool valid(BOARD board, byte is_white, byte current_depth) {
       while (bits != 0) {
         byte x = (byte)(bits & 0x7);
         bits >>= 4;
-        push(x, y, current_depth);
+        push_move(x, y, current_depth);
         found_anything = true;
       }
     }

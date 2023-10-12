@@ -23,7 +23,7 @@ void reset_move_stack(int lvl) {
 }
 
 // each next valid mmove at this recursion level is pushed on its own stack
-void push(int x, int y, int lvl) {
+void push_move(int x, int y, int lvl) {
   stack *S = &stacks[lvl];
   S->moves[S->top].x = x;
   S->moves[S->top].y = y;

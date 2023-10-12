@@ -14,11 +14,11 @@ static int test_mode = 0;
 void printCompilerVersion() {
   printf("wrath native: compiled with ");
 #if defined(__clang__) // Check for Clang
-  printf("Clang Version: %d.%d.%d\n", __clang_major__,
-         __clang_minor__, __clang_patchlevel__);
+  printf("Clang Version: %d.%d.%d\n", __clang_major__, __clang_minor__,
+         __clang_patchlevel__);
 #elif defined(__GNUC__) // Check for GCC or Clang
-  printf("GCC (GNU C Compiler) Version: %d.%d.%d\n", __GNUC__,
-         __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
+  printf("GCC (GNU C Compiler) Version: %d.%d.%d\n", __GNUC__, __GNUC_MINOR__,
+         __GNUC_PATCHLEVEL__);
 #elif defined(_MSC_VER) // Check for MSVC
   printf("MSVC (Microsoft Visual C++) Version: %d\n", _MSC_VER);
 #else

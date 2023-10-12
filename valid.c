@@ -32,7 +32,7 @@ int valid(BOARD board, int is_white, int current_depth) {
       // so we place onto the high bits.  And d1 has the current bit mask
 
       if ((row | (mask << 8)) != flip_table[row][i]) {
-        push(i, y, current_depth);
+        push_move(i, y, current_depth);
         used |= mask;
         found_anything = 1;
       }
@@ -116,7 +116,6 @@ int valid(BOARD board, int is_white, int current_depth) {
     // I'm writing this comment 36 years after I wrote this code
     // and I'm stunned that it worked out on the first go...
 
-
     // all used bits start in state 2 -> no match found
     // we never leave state 2 (see above)
     uint32_t y0 = 0;
@@ -125,12 +124,15 @@ int valid(BOARD board, int is_white, int current_depth) {
     for (int i = y - 1; i >= 0; i--) {
       uint8_t h = him[i];
       uint8_t m = me[i];
-      uint32_t d0 = ((uint8_t)(h >> (y-i)) << 16) | ((uint8_t)(h << (y-i)) << 8) | h;
-      uint32_t d1 = ((uint8_t)(m >> (y-i)) << 16) | ((uint8_t)(m << (y-i)) << 8) | m;
+      uint32_t d0 =
+          ((uint8_t)(h >> (y - i)) << 16) | ((uint8_t)(h << (y - i)) << 8) | h;
+      uint32_t d1 =
+          ((uint8_t)(m >> (y - i)) << 16) | ((uint8_t)(m << (y - i)) << 8) | m;
 
-      y0 = (~y1 & d0)  | (y0 & (y1|d1));
+      y0 = (~y1 & d0) | (y0 & (y1 | d1));
       y1 |= d1 | ~d0;
-      if (0 == ~y1) break;
+      if (0 == ~y1)
+        break;
     }
 
     y0 &= y1;
@@ -141,15 +143,18 @@ int valid(BOARD board, int is_white, int current_depth) {
 
     y1 = used2 | (used2 << 8) | (used2 << 16);
     y0 = 0;
-    for (int i = y + 1;i < 8; i++) {
+    for (int i = y + 1; i < 8; i++) {
       uint8_t h = him[i];
       uint8_t m = me[i];
-      uint32_t d0 = ((uint8_t)(h >> (i-y)) << 16) | ((uint8_t)(h << (i-y)) << 8) | h;
-      uint32_t d1 = ((uint8_t)(m >> (i-y)) << 16) | ((uint8_t)(m << (i-y)) << 8) | m;
+      uint32_t d0 =
+          ((uint8_t)(h >> (i - y)) << 16) | ((uint8_t)(h << (i - y)) << 8) | h;
+      uint32_t d1 =
+          ((uint8_t)(m >> (i - y)) << 16) | ((uint8_t)(m << (i - y)) << 8) | m;
 
-      y0 = (~y1 & d0)  | (y0 & (y1|d1));
+      y0 = (~y1 & d0) | (y0 & (y1 | d1));
       y1 |= d1 | ~d0;
-      if (0 == ~y1) break;
+      if (0 == ~y1)
+        break;
     }
 
     y0 &= y1;
@@ -166,7 +171,7 @@ int valid(BOARD board, int is_white, int current_depth) {
       while (bits != 0) {
         uint8_t x = (uint8_t)(bits & 0x7);
         bits >>= 4;
-        push(x, y, current_depth);
+        push_move(x, y, current_depth);
         found_anything = 1;
       }
     }
@@ -174,4 +179,3 @@ int valid(BOARD board, int is_white, int current_depth) {
 
   return found_anything;
 }
-

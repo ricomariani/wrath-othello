@@ -61,7 +61,7 @@ void safe_gets(char *buf, int len);
 int save();
 
 void reset_move_stack(int lvl);
-void push(int x, int y, int lvl);
+void push_move(int x, int y, int lvl);
 int pop_move(int *x, int *y, int lvl);
 
 uint16_t flip_edge_one_way(uint16_t mask, int is_white, int x, int dx);
