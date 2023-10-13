@@ -111,12 +111,18 @@ struct HBOARD {
     return data.AsUInt64().GetElement(0);
   }
 
-  public byte get(int i) {
-    return data.GetElement(i);
-  }
-
-  public void put(int i, byte b) {
-    data = data.WithElement(i, b);
+  public byte this[int index]
+  {
+      get
+      {
+          // Return the value at the specified index.
+          return data.GetElement(index);
+      }
+      set
+      {
+          // Set the value at the specified index.
+          data = data.WithElement(index, value);
+      }
   }
 }
 
@@ -250,7 +256,6 @@ again:;
 
 void move(ref BOARD board, bool is_white, int x, int y)
 {
-  board.put(is_white, y, (byte)(board.get(is_white, y) | (1<<x)));
   flip(ref board, is_white, x, y);
   display(board);
 }
@@ -330,14 +335,14 @@ void display_score(BOARD board)
 
   sc1 = 0;
   for (i = 0; i < 8; i++) {
-    sc1 += bit_count[board.half(true).get(i)];
+    sc1 += bit_count[board.half(true)[i]];
   }
 
   Console.Write("\t\t\t\t\t\t    Score: W{0} ", sc1);
 
   sc2 = 0;
   for (i = 0; i < 8; i++) {
-    sc2 += bit_count[board.half(false).get(i)];
+    sc2 += bit_count[board.half(false)[i]];
   }
 
   Console.Write("B={0}\n", sc2);
@@ -619,172 +624,160 @@ ushort gethorz(HBOARD me, HBOARD him, int x, int y)
 {
   // pull the row out in the usual way and strip the "me" bit at column x
   // normalize to x, y OFF
-  return (ushort)(((me.get(y) << 8) | him.get(y)) & ~(0x100 << x));
+  return (ushort)(((me[y] << 8) | him[y]) & ~(0x100 << x));
 }
 
 void puthorz(ref HBOARD me, ref HBOARD him, int y, ushort row)
 {
   // super easy to put horizontal row back
-  me.put(y, (byte)(row >> 8));
-  him.put(y, (byte)(row & 0xff));
+  me[y] = (byte)(row >> 8);
+  him[y] = (byte)(row & 0xff);
 }
 
 ushort getvert(HBOARD me, HBOARD him, int x, int y)
 {
-  // we're going to read out this column in me and him
-  byte mask_in = (byte)(1 << x);
-
   // these are the starting output bits
-  ushort mask_me = 0x100;
-  ushort mask_him = 1;
-  ushort row = 0;
-  for (int i = 0; i < 8; i++, mask_me <<= 1, mask_him <<= 1) {
-    // written this way because it should compile nicely into conditional select
-    // with no actual branches.  Pull out the mask bit and spread it across the
-    // virtual "row"
-    row |= (ushort)(((me.get(i) & mask_in) != 0) ? mask_me : 0);
-    row |= (ushort)(((him.get(i) & mask_in) != 0) ? mask_him : 0);
-  }
+  ushort row = (ushort)(((him[0] >> x) & 1));
+  row |= (ushort)(((him[1] >> x) & 1) << 1);
+  row |= (ushort)(((him[2] >> x) & 1) << 2);
+  row |= (ushort)(((him[3] >> x) & 1) << 3);
+  row |= (ushort)(((him[4] >> x) & 1) << 4);
+  row |= (ushort)(((him[5] >> x) & 1) << 5);
+  row |= (ushort)(((him[6] >> x) & 1) << 6);
+  row |= (ushort)(((him[7] >> x) & 1) << 7);
+  row |= (ushort)(((me[0] >> x) & 1) << 8);
+  row |= (ushort)(((me[1] >> x) & 1) << 9);
+  row |= (ushort)(((me[2] >> x) & 1) << 10);
+  row |= (ushort)(((me[3] >> x) & 1) << 11);
+  row |= (ushort)(((me[4] >> x) & 1) << 12);
+  row |= (ushort)(((me[5] >> x) & 1) << 13);
+  row |= (ushort)(((me[6] >> x) & 1) << 14);
+  row |= (ushort)(((me[7] >> x) & 1) << 15);
 
-  // normalize to x, y OFF
-  return (ushort)(row & ~(0x100 << y));
+  // normalize to x, y OFF, previous flip directions may have set this
+  row &= (ushort)~(0x100 << y);
+  return row;
 }
 
 void putvert(ref HBOARD me, ref HBOARD him, int x, ushort row)
 {
   // this time we will write out the x column so that it matches the
   // bits the row, reversing what getvert does.
-  byte mask_out = (byte)((1 << x));
-  byte hi = (byte)(row >> 8);
-  byte mask_in = 1;
-  for (int i = 0; i < 8; i++, mask_in <<= 1) {
-    // either "or" in the bit, or else "~and" it out
-    byte b = me.get(i);
-    if ((hi & mask_in) != 0)
-      b |= mask_out;
-    else
-      b &= (byte)~mask_out;
-    me.put(i, b);
+  byte mask_out = (byte)(1 << x);
 
-    b = him.get(i);
-    if ((row & mask_in) != 0)
-      b |= mask_out;
-    else
-      b &= (byte)~mask_out;
-    him.put(i, b);
-  }
-}
+  // flip the bits that need flipping
+  him[0] ^= (byte)(mask_out & (him[0] ^ ((row & 1) << x))); row >>= 1;
+  him[1] ^= (byte)(mask_out & (him[1] ^ ((row & 1) << x))); row >>= 1;
+  him[2] ^= (byte)(mask_out & (him[2] ^ ((row & 1) << x))); row >>= 1;
+  him[3] ^= (byte)(mask_out & (him[3] ^ ((row & 1) << x))); row >>= 1;
+  him[4] ^= (byte)(mask_out & (him[4] ^ ((row & 1) << x))); row >>= 1;
+  him[5] ^= (byte)(mask_out & (him[5] ^ ((row & 1) << x))); row >>= 1;
+  him[6] ^= (byte)(mask_out & (him[6] ^ ((row & 1) << x))); row >>= 1;
+  him[7] ^= (byte)(mask_out & (him[7] ^ ((row & 1) << x))); row >>= 1;
+
+  me[0] ^= (byte)(mask_out & (me[0] ^ ((row & 1) << x))); row >>= 1;
+  me[1] ^= (byte)(mask_out & (me[1] ^ ((row & 1) << x))); row >>= 1;
+  me[2] ^= (byte)(mask_out & (me[2] ^ ((row & 1) << x))); row >>= 1;
+  me[3] ^= (byte)(mask_out & (me[3] ^ ((row & 1) << x))); row >>= 1;
+  me[4] ^= (byte)(mask_out & (me[4] ^ ((row & 1) << x))); row >>= 1;
+  me[5] ^= (byte)(mask_out & (me[5] ^ ((row & 1) << x))); row >>= 1;
+  me[6] ^= (byte)(mask_out & (me[6] ^ ((row & 1) << x))); row >>= 1;
+  me[7] ^= (byte)(mask_out & (me[7] ^ ((row & 1) << x)));}
 
 // get the first diagonal, this is where y goes up when x goes up
 ushort getdiag1(HBOARD me, HBOARD him, int x, int y)
 {
-  int i, d;
+  int x0 = 0;
+  int y0 = y - x;
+  int y1 = 7;
 
-  d = y - x;
+  if (y0 < 0) {
+    x0 = -y0;
+    y1 = 7 - x0;
+    y0 = 0;
+  }
 
-  byte mask = 1;
+  byte mask = (byte)(1 << x0);
   ushort row = 0;
-  for (i = 0; i < 8; i++, mask <<= 1) {
-    int y_diag = i + d;
 
-    // We only pull in the fragment of the row from the diagonal that makes
-    // sense. We have to do this because of course all the diagonals are shorter
-    // except 1. Note that extra blanks at the end of the row cannot create new
-    // legal flips so skipping those bits always works
-    if (y_diag < 0 || y_diag  > 7)
-      continue;
-
+  for (int i = y0; i <= y1; i++, mask <<= 1) {
     // merge in the appropriate column from the appropriate row
     // mask and y_diag do exactly this...  me bits go in the high byte.
-    row |= (ushort)(((me.get(y_diag) & mask) << 8) | (him.get(y_diag) & mask));
-
+    row |= (ushort)(((me[i] & mask) << 8) | (him[i] & mask));
   }
-  // normalize to x, y OFF
-  row &= (ushort)~(0x100 << x);
-  return row;
+
+  // normalize to x, y OFF, previous flip directions may have set this
+  return (ushort)(row & ~(0x100 << x));
 }
 
 // write back the first diagonal, this is where y goes up when x goes up
 void putdiag1(ref HBOARD me, ref HBOARD him, int x, int y, ushort row)
 {
-  int d = y - x;
+  int x0 = 0;
+  int y0 = y - x;
+  int y1 = 7;
+
+  if (y0 < 0) {
+    x0 = -y0;
+    y1 = 7 - x0;
+    y0 = 0;
+  }
+
+  byte mask = (byte)(1 << x0);
   byte hi = (byte)(row >> 8);
 
-  byte mask = 1;
-  for (int i = 0; i < 8; i++, mask <<= 1) {
-    // as before consider just the right slice of the diagonal
-    int y_diag = i + d;
-    if (y_diag < 0 || y_diag > 7)
-      continue;
-
-    // either "or" in the bit, or else "~and" it out
-    byte b = me.get(y_diag);
-    if ((hi & mask) != 0)
-      b |= mask;
-    else
-      b &= (byte)~mask;
-    me.put(y_diag, b);
-
-    b = him.get(y_diag);
-    if ((row & mask) != 0)
-      b |= mask;
-    else
-      b &= (byte)~mask;
-    him.put(y_diag, b);
+  for (int i = y0; i <= y1; i++, mask <<= 1) {
+    // flip the bits that need flipping
+    me[i] ^= (byte)((hi ^ me[i]) & mask);
+    him[i] ^= (byte)((row ^ him[i]) & mask);
   }
 }
 
 // get the second diagonal, this is where y goes down when x goes up
 ushort getdiag2(HBOARD me, HBOARD him, int x, int y)
 {
-  int d = y + x;
+  int x0 = 0;
+  int y0 = x + y;
+  int y1 = 0;
 
+  if (y0 > 7) {
+     x0 = y0 - 7;
+     y1 = x0;
+     y0 = 7;
+  }
+
+  byte mask = (byte)(1 << x0);
   ushort row = 0;
-  int mask = 1;
-  for (int i = 0; i < 8; i++, mask <<= 1) {
-    int y_diag = d - i;
 
-    // We only pull in the fragment of the row from the diagonal that makes
-    // sense. We have to do this because of course all the diagonals are shorter
-    // except 1. Note that extra blanks at the end of the row cannot create new
-    // legal flips so skipping those bits always works
-    if (y_diag < 0 || y_diag > 7)
-      continue;
-
+  for (int i = y0; i >= y1; i--, mask <<= 1) {
     // merge in the appropriate column from the appropriate row
     // mask and y_diag do exactly this...  me bits go in the high byte.
-    row |= (ushort)(((me.get(y_diag) & mask) << 8) | (him.get(y_diag) & mask));
+    row |= (ushort)(((me[i] & mask) << 8) | (him[i] & mask));
   }
-  // normalize to x, y OFF
-  row &= (ushort)~(0x100 << x);
-  return row;
+
+  // normalize to x, y OFF, previous flip directions may have set this
+  return (ushort)(row & ~(0x100 << x));
 }
 
 void putdiag2(ref HBOARD me, ref HBOARD him, int x, int y, ushort row)
 {
-  int d = y + x;
+  int x0 = 0;
+  int y0 = x + y;
+  int y1 = 0;
+
+  if (y0 > 7) {
+     x0 = y0 - 7;
+     y1 = x0;
+     y0 = 7;
+  }
+
+  byte mask = (byte)(1 << x0);
   byte hi = (byte)(row >> 8);
-  byte mask = 1;
-  for (int i = 0; i < 8; i++, mask <<= 1) {
-    // as before consider just the right slice of the diagonal
-    int y_diag = d - i;
-    if (y_diag < 0 || y_diag > 7)
-      continue;
 
-    // either "or" in the bit, or else "~and" it out
-    byte b = me.get(y_diag);
-    if ((hi & mask) != 0)
-      b |= mask;
-    else
-      b &= (byte)~mask;
-    me.put(y_diag, b);
-
-    b = him.get(y_diag);
-    if ((row & mask) != 0)
-      b |= mask;
-    else
-      b &= (byte)~mask;
-    him.put(y_diag, b);
+  for (int i = y0; i >= y1; i--, mask <<= 1) {
+    // flip the bits that need flipping
+    me[i] ^= (byte)((hi ^ me[i]) & mask);
+    him[i] ^= (byte)((row ^ him[i]) & mask);
   }
 }
 
@@ -1202,9 +1195,9 @@ int score(BOARD board, bool is_white)
     // possible enemy score which means we might not play
     // truly perfectly. The wiggle room is that we might
     // be able to force more empty squares with our score
-    // fixed.  This actually comes up in the game in endgame.txt    
+    // fixed.  This actually comes up in the game in endgame.txt
     for (int j = 0; j < 8; j++) {
-      s += bit_count[me.get(j)];
+      s += bit_count[me[j]];
     }
     return s;
   }
@@ -1212,7 +1205,7 @@ int score(BOARD board, bool is_white)
   // use the weighted value for the rows that are in "the middle"
   int i;
   for (i = 2; i < 6; i++) {
-    s += weighted_row_value[me.get(i)];
+    s += weighted_row_value[me[i]];
   }
 
   // Note that row 1 and 6 are never counted, they get zero score,
@@ -1220,16 +1213,16 @@ int score(BOARD board, bool is_white)
 
   // the square one position away from the corners are considered
   // very bad indeed
-  s -= bit_count[me.get(1) & 0x7e] + bit_count[me.get(6) & 0x7e] +
-       ((bit_count[me.get(1) & 0x42] + bit_count[me.get(6) & 0x42]) << 2);
+  s -= bit_count[me[1] & 0x7e] + bit_count[me[6] & 0x7e] +
+       ((bit_count[me[1] & 0x42] + bit_count[me[6] & 0x42]) << 2);
 
   // make a virtual row that consists of the last column
   int tmp = 0;
   for (i = 0; i < 8; i++)
-    tmp = (tmp << 1) | (1 & (me.get(i) >> 7));
+    tmp = (tmp << 1) | (1 & (me[i] >> 7));
 
   for (i = 0; i < 8; i++) {
-    tmp = (tmp << 1) | (1 & (him.get(i) >> 7));
+    tmp = (tmp << 1) | (1 & (him[i] >> 7));
   }
 
   // add the edge score
@@ -1238,12 +1231,12 @@ int score(BOARD board, bool is_white)
   // make a virtual row that consists of the first column
   tmp = 0;
   for (i = 0; i < 8; i++)
-    tmp = (tmp << 1) | (me.get(i) & 1);
+    tmp = (tmp << 1) | (me[i] & 1);
   for (i = 0; i < 8; i++)
-    tmp = (tmp << 1) | (him.get(i) & 1);
+    tmp = (tmp << 1) | (him[i] & 1);
 
   // add the edge scores of the column plus first and last row
-  s += edge[tmp] + edge[(me.get(0) << 8) | him.get(0)] + edge[(me.get(7) << 8) | him.get(7)];
+  s += edge[tmp] + edge[(me[0] << 8) | him[0]] + edge[(me[7] << 8) | him[7]];
 
   return s;
 }
@@ -1531,7 +1524,7 @@ bool valid(BOARD board, bool is_white, byte current_depth)
   HBOARD him = board.half(!is_white);
 
   for (byte y = 0; y < 8; y++) {
-    ushort row = (ushort)((me.get(y) << 8) | him.get(y));
+    ushort row = (ushort)((me[y] << 8) | him[y]);
     byte used = (byte)(row | (row >> 8));
 
     // already full on this row, nothing to do
@@ -1644,8 +1637,8 @@ bool valid(BOARD board, bool is_white, byte current_depth)
     uint y1 = (uint)(used | (used << 8) | (used << 16));
 
     for (int i = y - 1; i >= 0; i--) {
-      byte h = him.get(i);
-      byte m = me.get(i);
+      byte h = him[i];
+      byte m = me[i];
       uint d0 = (uint)(((byte)(h >> (y-i)) << 16) | ((byte)(h << (y-i)) << 8) | h);
       uint d1 = (uint)(((byte)(m >> (y-i)) << 16) | ((byte)(m << (y-i)) << 8) | m);
 
@@ -1662,8 +1655,8 @@ bool valid(BOARD board, bool is_white, byte current_depth)
     y1 = (uint)(used2 | (used2 << 8) | (used2 << 16));
     y0 = 0;
     for (int i = y + 1;i < 8; i++) {
-      byte h = him.get(i);
-      byte m = me.get(i);
+      byte h = him[i];
+      byte m = me[i];
       uint d0 = (uint)(((byte)(h >> (i-y)) << 16) | ((byte)(h << (i-y)) << 8) | h);
       uint d1 = (uint)(((byte)(m >> (i-y)) << 16) | ((byte)(m << (i-y)) << 8) | m);
 

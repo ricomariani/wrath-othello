@@ -58,8 +58,11 @@ void flip(BOARD board, int is_white, int x, int y) {
 
 static uint16_t gethorz(uint8_t *me, uint8_t *him, int x, int y) {
   // pull the row out in the usual way and strip the "me" bit at column x
-  // normalize to x, y OFF
-  return ((me[y] << 8) | (him[y])) & ~(0x100 << x);
+  // we don't have to normalize to x, y OFF because gethorz goes first
+  // so the square at x, y has not yet been filled.  The other flips
+  // have to assume that a previous direction might have already placed
+  // the move piece at x, y
+  return (me[y] << 8) | (him[y]);
 }
 
 static void puthorz(uint8_t *me, uint8_t *him, int y, uint16_t row) {
@@ -69,64 +72,74 @@ static void puthorz(uint8_t *me, uint8_t *him, int y, uint16_t row) {
 }
 
 static uint16_t getvert(uint8_t *me, uint8_t *him, int x, int y) {
-  // we're going to read out this column in me and him
-  int8_t mask_in = 1 << x;
+  uint16_t row = ((him[0] >> x) & 1);
+  row |= ((him[1] >> x) & 1) << 1;
+  row |= ((him[2] >> x) & 1) << 2;
+  row |= ((him[3] >> x) & 1) << 3;
+  row |= ((him[4] >> x) & 1) << 4;
+  row |= ((him[5] >> x) & 1) << 5;
+  row |= ((him[6] >> x) & 1) << 6;
+  row |= ((him[7] >> x) & 1) << 7;
 
-  // these are the starting output bits
-  uint16_t mask_me = 0x100;
-  uint16_t mask_him = 1;
-  uint16_t row = 0;
-  for (int i = 0; i < 8; i++, mask_me <<= 1, mask_him <<= 1) {
-    // written this way because it should compile nicely into conditional select
-    // with no actual branches.  Pull out the mask bit and spread it across the
-    // virtual "row"
-    row |= (me[i] & mask_in) ? mask_me : 0;
-    row |= (him[i] & mask_in) ? mask_him : 0;
-  }
+  row |= ((me[0] >> x) & 1) << 8;
+  row |= ((me[1] >> x) & 1) << 9;
+  row |= ((me[2] >> x) & 1) << 10;
+  row |= ((me[3] >> x) & 1) << 11;
+  row |= ((me[4] >> x) & 1) << 12;
+  row |= ((me[5] >> x) & 1) << 13;
+  row |= ((me[6] >> x) & 1) << 14;
+  row |= ((me[7] >> x) & 1) << 15;
 
   // normalize to x, y OFF
-  return row & ~(0x100 << y);
+  row &= ~(0x100 << y);
+  return row;
 }
 
 static void putvert(uint8_t *me, uint8_t *him, int x, uint16_t row) {
   // this time we will write out the x column so that it matches the
   // bits the row, reversing what getvert does.
   uint8_t mask_out = 1 << x;
-  uint8_t hi = (uint8_t)(row >> 8);
-  uint8_t mask_in = 1;
-  for (int i = 0; i < 8; i++, mask_in <<= 1) {
-    // either "or" in the bit, or else "~and" it out
-    if (hi & mask_in)
-      me[i] |= mask_out;
-    else
-      me[i] &= ~mask_out;
 
-    if (row & mask_in)
-      him[i] |= mask_out;
-    else
-      him[i] &= ~mask_out;
-  }
+  // flip the bits that need flipping
+  him[0] ^= mask_out & (him[0] ^ ((row & 1) << x)); row >>= 1;
+  him[1] ^= mask_out & (him[1] ^ ((row & 1) << x)); row >>= 1;
+  him[2] ^= mask_out & (him[2] ^ ((row & 1) << x)); row >>= 1;
+  him[3] ^= mask_out & (him[3] ^ ((row & 1) << x)); row >>= 1;
+  him[4] ^= mask_out & (him[4] ^ ((row & 1) << x)); row >>= 1;
+  him[5] ^= mask_out & (him[5] ^ ((row & 1) << x)); row >>= 1;
+  him[6] ^= mask_out & (him[6] ^ ((row & 1) << x)); row >>= 1;
+  him[7] ^= mask_out & (him[7] ^ ((row & 1) << x)); row >>= 1;
+
+  me[0] ^= mask_out & (me[0] ^ ((row & 1) << x)); row >>= 1;
+  me[1] ^= mask_out & (me[1] ^ ((row & 1) << x)); row >>= 1;
+  me[2] ^= mask_out & (me[2] ^ ((row & 1) << x)); row >>= 1;
+  me[3] ^= mask_out & (me[3] ^ ((row & 1) << x)); row >>= 1;
+  me[4] ^= mask_out & (me[4] ^ ((row & 1) << x)); row >>= 1;
+  me[5] ^= mask_out & (me[5] ^ ((row & 1) << x)); row >>= 1;
+  me[6] ^= mask_out & (me[6] ^ ((row & 1) << x)); row >>= 1;
+  me[7] ^= mask_out & (me[7] ^ ((row & 1) << x));
+  
 }
 
 // get the first diagonal, this is where y goes up when x goes up
 static uint16_t getdiag1(uint8_t *me, uint8_t *him, int x, int y) {
-  int d = y - x;
+  int x0 = 0;
+  int y0 = y - x;
+  int y1 = 7;
+
+  if (y0 < 0) {
+    x0 = -y0;
+    y1 = 7 - x0;
+    y0 = 0;
+  }
+
+  uint8_t mask = 1 << x0;
   uint16_t row = 0;
 
-  uint8_t mask = 1;
-  for (int i = 0; i < 8; i++, mask <<= 1) {
-    int y_diag = i + d;
-
-    // We only pull in the fragment of the row from the diagonal that makes
-    // sense. We have to do this because of course all the diagonals are shorter
-    // except 1. Note that extra blanks at the end of the row cannot create new
-    // legal flips so skipping those bits always works
-    if (y_diag < 0 || y_diag > 7)
-      continue;
-
+  for (int i = y0; i <= y1; i++, mask <<= 1) {
     // merge in the appropriate column from the appropriate row
     // mask and y_diag do exactly this...  me bits go in the high byte.
-    row |= ((me[y_diag] & mask) << 8) | (him[y_diag] & mask);
+    row |= ((me[i] & mask) << 8) | (him[i] & mask);
   }
 
   // normalize to x, y OFF
@@ -135,48 +148,45 @@ static uint16_t getdiag1(uint8_t *me, uint8_t *him, int x, int y) {
 
 // write back the first diagonal, this is where y goes up when x goes up
 static void putdiag1(uint8_t *me, uint8_t *him, int x, int y, uint16_t row) {
-  int d = y - x;
-  uint8_t hi = (uint8_t)(row >> 8);
+  int x0 = 0;
+  int y0 = y - x;
+  int y1 = 7;
 
-  uint8_t mask = 1;
-  for (int i = 0; i < 8; i++, mask <<= 1) {
-    // as before consider just the right slice of the diagonal
-    int y_diag = i + d;
-    if (y_diag < 0 || y_diag > 7)
-      continue;
+  if (y0 < 0) {
+    x0 = -y0;
+    y1 = 7 - x0;
+    y0 = 0;
+  }
 
-    // either "or" in the bit, or else "~and" it out
-    if (hi & mask)
-      me[y_diag] |= mask;
-    else
-      me[y_diag] &= ~mask;
+  uint8_t mask = 1 << x0;
+  uint8_t hi = row >> 8;
 
-    if (row & mask)
-      him[y_diag] |= mask;
-    else
-      him[y_diag] &= ~mask;
+  for (int i = y0; i <= y1; i++, mask <<= 1) {
+    // flip the bits that need flipping
+    me[i] ^= (hi ^ me[i]) & mask;
+    him[i] ^= (row ^ him[i]) & mask;
   }
 }
 
 // get the second diagonal, this is where y goes down when x goes up
 static uint16_t getdiag2(uint8_t *me, uint8_t *him, int x, int y) {
-  int d = y + x;
+  int x0 = 0;
+  int y0 = x + y;
+  int y1 = 0;
 
+  if (y0 > 7) {
+     x0 = y0 - 7;
+     y1 = x0;
+     y0 = 7;
+  }
+
+  uint8_t mask = 1 << x0;
   uint16_t row = 0;
-  int mask = 1;
-  for (int i = 0; i < 8; i++, mask <<= 1) {
-    int y_diag = d - i;
 
-    // We only pull in the fragment of the row from the diagonal that makes
-    // sense. We have to do this because of course all the diagonals are shorter
-    // except 1. Note that extra blanks at the end of the row cannot create new
-    // legal flips so skipping those bits always works
-    if (y_diag < 0 || y_diag > 7)
-      continue;
-
+  for (int i = y0; i >= y1; i--, mask <<= 1) {
     // merge in the appropriate column from the appropriate row
     // mask and y_diag do exactly this...  me bits go in the high byte.
-    row |= ((me[y_diag] & mask) << 8) | (him[y_diag] & mask);
+    row |= ((me[i] & mask) << 8) | (him[i] & mask);
   }
 
   // normalize to x, y OFF
@@ -185,25 +195,22 @@ static uint16_t getdiag2(uint8_t *me, uint8_t *him, int x, int y) {
 
 // write back the second diagonal, this is where y goes down when x goes up
 static void putdiag2(uint8_t *me, uint8_t *him, int x, int y, uint16_t row) {
-  int d = y + x;
-  uint8_t hi = (uint8_t)(row >> 8);
+  int x0 = 0;
+  int y0 = x + y;
+  int y1 = 0;
 
-  uint8_t mask = 1;
-  for (int i = 0; i < 8; i++, mask <<= 1) {
-    // as before consider just the right slice of the diagonal
-    int y_diag = d - i;
-    if (y_diag < 0 || y_diag > 7)
-      continue;
+  if (y0 > 7) {
+     x0 = y0 - 7;
+     y1 = x0;
+     y0 = 7;
+  }
 
-    // either "or" in the bit, or else "~and" it out
-    if (hi & mask)
-      me[y_diag] |= mask;
-    else
-      me[y_diag] &= ~mask;
+  uint8_t mask = 1 << x0;
+  uint8_t hi = row >> 8;
 
-    if (row & mask)
-      him[y_diag] |= mask;
-    else
-      him[y_diag] &= ~mask;
+  for (int i = y0; i >= y1; i--, mask <<= 1) {
+    // flip the bit if needed
+    me[i] ^= (hi ^ me[i]) & mask;
+    him[i] ^= (row ^ him[i]) & mask;
   }
 }

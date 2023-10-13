@@ -238,7 +238,6 @@ again:;
 
 void move(ref BOARD board, byte is_white, int x, int y)
 {
-  board.put(is_white, y, (byte)(board.get(is_white, y) | (1<<x)));
   flip(ref board, is_white, x, y);
   display(board);
 }
@@ -595,8 +594,8 @@ void flip2(ref x8<byte> me, ref x8<byte> him, int x, int y)
 ushort gethorz(ref x8<byte> me, ref x8<byte> him, int x, int y)
 {
   // pull the row out in the usual way and strip the "me" bit at column x
-  // normalize to x, y OFF
-  return (ushort)(((me[y] << 8) | him[y]) & ~(0x100 << x));
+  // we don't have to normalize to x,y OFF because we are first
+  return (ushort)((me[y] << 8) | him[y]);
 }
 
 void puthorz(ref x8<byte> me, ref x8<byte> him, int y, ushort row)
@@ -608,157 +607,149 @@ void puthorz(ref x8<byte> me, ref x8<byte> him, int y, ushort row)
 
 ushort getvert(ref x8<byte> me, ref x8<byte> him, int x, int y)
 {
-  // we're going to read out this column in me and him
-  byte mask_in = (byte)(1 << x);
-
   // these are the starting output bits
-  ushort mask_me = 0x100;
-  ushort mask_him = 1;
-  ushort row = 0;
-  for (int i = 0; i < 8; i++, mask_me <<= 1, mask_him <<= 1) {
-    // written this way because it should compile nicely into conditional select
-    // with no actual branches.  Pull out the mask bit and spread it across the
-    // virtual "row"
-    row |= (ushort)(((me[i] & mask_in) != 0) ? mask_me : 0);
-    row |= (ushort)(((him[i] & mask_in) != 0) ? mask_him : 0);
-  }
+  ushort row = (ushort)(((him[0] >> x) & 1));
+  row |= (ushort)(((him[1] >> x) & 1) << 1);
+  row |= (ushort)(((him[2] >> x) & 1) << 2);
+  row |= (ushort)(((him[3] >> x) & 1) << 3);
+  row |= (ushort)(((him[4] >> x) & 1) << 4);
+  row |= (ushort)(((him[5] >> x) & 1) << 5);
+  row |= (ushort)(((him[6] >> x) & 1) << 6);
+  row |= (ushort)(((him[7] >> x) & 1) << 7);
+  row |= (ushort)(((me[0] >> x) & 1) << 8);
+  row |= (ushort)(((me[1] >> x) & 1) << 9);
+  row |= (ushort)(((me[2] >> x) & 1) << 10);
+  row |= (ushort)(((me[3] >> x) & 1) << 11);
+  row |= (ushort)(((me[4] >> x) & 1) << 12);
+  row |= (ushort)(((me[5] >> x) & 1) << 13);
+  row |= (ushort)(((me[6] >> x) & 1) << 14);
+  row |= (ushort)(((me[7] >> x) & 1) << 15);
 
-  // normalize to x, y OFF
-  return (ushort)(row & ~(0x100 << y));
+  // normalize to x, y OFF, previous flip directions may have set this
+  row &= (ushort)~(0x100 << y);
+  return row;
 }
 
 void putvert(ref x8<byte> me, ref x8<byte> him, int x, ushort row)
 {
   // this time we will write out the x column so that it matches the
   // bits the row, reversing what getvert does.
-  byte mask_out = (byte)((1 << x));
-  byte hi = (byte)(row >> 8);
-  byte mask_in = 1;
-  for (int i = 0; i < 8; i++, mask_in <<= 1) {
-    // either "or" in the bit, or else "~and" it out
-    byte b = me[i];
-    if ((hi & mask_in) != 0)
-      b |= mask_out;
-    else
-      b &= (byte)~mask_out;
-    me[i] = b;
+  byte mask_out = (byte)(1 << x);
 
-    b = him[i];
-    if ((row & mask_in) != 0)
-      b |= mask_out;
-    else
-      b &= (byte)~mask_out;
-    him[i] = b;
-  }
+  // flip the bits that need flipping
+  him[0] ^= (byte)(mask_out & (him[0] ^ ((row & 1) << x))); row >>= 1;
+  him[1] ^= (byte)(mask_out & (him[1] ^ ((row & 1) << x))); row >>= 1;
+  him[2] ^= (byte)(mask_out & (him[2] ^ ((row & 1) << x))); row >>= 1;
+  him[3] ^= (byte)(mask_out & (him[3] ^ ((row & 1) << x))); row >>= 1;
+  him[4] ^= (byte)(mask_out & (him[4] ^ ((row & 1) << x))); row >>= 1;
+  him[5] ^= (byte)(mask_out & (him[5] ^ ((row & 1) << x))); row >>= 1;
+  him[6] ^= (byte)(mask_out & (him[6] ^ ((row & 1) << x))); row >>= 1;
+  him[7] ^= (byte)(mask_out & (him[7] ^ ((row & 1) << x))); row >>= 1;
+
+  me[0] ^= (byte)(mask_out & (me[0] ^ ((row & 1) << x))); row >>= 1;
+  me[1] ^= (byte)(mask_out & (me[1] ^ ((row & 1) << x))); row >>= 1;
+  me[2] ^= (byte)(mask_out & (me[2] ^ ((row & 1) << x))); row >>= 1;
+  me[3] ^= (byte)(mask_out & (me[3] ^ ((row & 1) << x))); row >>= 1;
+  me[4] ^= (byte)(mask_out & (me[4] ^ ((row & 1) << x))); row >>= 1;
+  me[5] ^= (byte)(mask_out & (me[5] ^ ((row & 1) << x))); row >>= 1;
+  me[6] ^= (byte)(mask_out & (me[6] ^ ((row & 1) << x))); row >>= 1;
+  me[7] ^= (byte)(mask_out & (me[7] ^ ((row & 1) << x)));
 }
 
 // get the first diagonal, this is where y goes up when x goes up
 ushort getdiag1(ref x8<byte> me, ref x8<byte> him, int x, int y)
 {
-  int d = y - x;
-  byte mask = 1;
+  int x0 = 0;
+  int y0 = y - x;
+  int y1 = 7;
+
+  if (y0 < 0) {
+    x0 = -y0;
+    y1 = 7 - x0;
+    y0 = 0;
+  }
+
+  byte mask = (byte)(1 << x0);
   ushort row = 0;
-  for (int i = 0; i < 8; i++, mask <<= 1) {
-    int y_diag = i + d;
 
-    // We only pull in the fragment of the row from the diagonal that makes
-    // sense. We have to do this because of course all the diagonals are shorter
-    // except 1. Note that extra blanks at the end of the row cannot create new
-    // legal flips so skipping those bits always works
-    if (y_diag < 0 || y_diag  > 7)
-      continue;
-
+  for (int i = y0; i <= y1; i++, mask <<= 1) {
     // merge in the appropriate column from the appropriate row
     // mask and y_diag do exactly this...  me bits go in the high byte.
-    row |= (ushort)(((me[y_diag] & mask) << 8) | (him[y_diag] & mask));
-
+    row |= (ushort)(((me[i] & mask) << 8) | (him[i] & mask));
   }
-  // normalize to x, y OFF
-  row &= (ushort)~(0x100 << x);
-  return row;
+
+  // normalize to x, y OFF, previous flip directions may have set this
+  return (ushort)(row & ~(0x100 << x));
 }
 
 // write back the first diagonal, this is where y goes up when x goes up
 void putdiag1(ref x8<byte> me, ref x8<byte> him, int x, int y, int row)
 {
-  int d = y - x;
+  int x0 = 0;
+  int y0 = y - x;
+  int y1 = 7;
+
+  if (y0 < 0) {
+    x0 = -y0;
+    y1 = 7 - x0;
+    y0 = 0;
+  }
+
+  byte mask = (byte)(1 << x0);
   byte hi = (byte)(row >> 8);
 
-  byte mask = 1;
-  for (int i = 0; i < 8; i++, mask <<= 1) {
-    // as before consider just the right slice of the diagonal
-    int y_diag = i + d;
-    if (y_diag < 0 || y_diag > 7)
-      continue;
-
-    // either "or" in the bit, or else "~and" it out
-    byte b = me[y_diag];
-    if ((hi & mask) != 0)
-      b |= mask;
-    else
-      b &= (byte)~mask;
-    me[y_diag] = b;
-
-    b = him[y_diag];
-    if ((row & mask) != 0)
-      b |= mask;
-    else
-      b &= (byte)~mask;
-    him[y_diag] = b;
+  for (int i = y0; i <= y1; i++, mask <<= 1) {
+    // flip the bits that need flipping
+    me[i] ^= (byte)((hi ^ me[i]) & mask);
+    him[i] ^= (byte)((row ^ him[i]) & mask);
   }
 }
 
 // get the second diagonal, this is where y goes down when x goes up
 ushort getdiag2(ref x8<byte> me, ref x8<byte> him, int x, int y)
 {
-  int d = y + x;
+  int x0 = 0;
+  int y0 = x + y;
+  int y1 = 0;
 
+  if (y0 > 7) {
+     x0 = y0 - 7;
+     y1 = x0;
+     y0 = 7;
+  }
+
+  byte mask = (byte)(1 << x0);
   ushort row = 0;
-  int mask = 1;
-  for (int i = 0; i < 8; i++, mask <<= 1) {
-    int y_diag = d - i;
 
-    // We only pull in the fragment of the row from the diagonal that makes
-    // sense. We have to do this because of course all the diagonals are shorter
-    // except 1. Note that extra blanks at the end of the row cannot create new
-    // legal flips so skipping those bits always works
-    if (y_diag < 0 || y_diag > 7)
-      continue;
-
+  for (int i = y0; i >= y1; i--, mask <<= 1) {
     // merge in the appropriate column from the appropriate row
     // mask and y_diag do exactly this...  me bits go in the high byte.
-    row |= (ushort)(((me[y_diag] & mask) << 8) | (him[y_diag] & mask));
+    row |= (ushort)(((me[i] & mask) << 8) | (him[i] & mask));
   }
-  // normalize to x, y OFF
-  row &= (ushort)~(0x100 << x);
-  return row;
+
+  // normalize to x, y OFF, previous flip directions may have set this
+  return (ushort)(row & ~(0x100 << x));
 }
 
 void putdiag2(ref x8<byte> me, ref x8<byte> him, int x, int y, ushort row)
 {
-  int d = y + x;
+  int x0 = 0;
+  int y0 = x + y;
+  int y1 = 0;
+
+  if (y0 > 7) {
+     x0 = y0 - 7;
+     y1 = x0;
+     y0 = 7;
+  }
+
+  byte mask = (byte)(1 << x0);
   byte hi = (byte)(row >> 8);
-  byte mask = 1;
-  for (int i = 0; i < 8; i++, mask <<= 1) {
-    // as before consider just the right slice of the diagonal
-    int y_diag = d - i;
-    if (y_diag < 0 || y_diag > 7)
-      continue;
 
-    // either "or" in the bit, or else "~and" it out
-    byte b = me[y_diag];
-    if ((hi & mask) != 0)
-      b |= mask;
-    else
-      b &= (byte)~mask;
-    me[y_diag] = b;
-
-    b = him[y_diag];
-    if ((row & mask) != 0)
-      b |= mask;
-    else
-      b &= (byte)~mask;
-    him[y_diag] = b;
+  for (int i = y0; i >= y1; i--, mask <<= 1) {
+    // flip the bits that need flipping
+    me[i] ^= (byte)((hi ^ me[i]) & mask);
+    him[i] ^= (byte)((row ^ him[i]) & mask);
   }
 }
 

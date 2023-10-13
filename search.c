@@ -352,7 +352,6 @@ static int maxi(BOARD board, int is_white, int depth, int a, int b) {
 static void bcpy(BOARD b1, BOARD b2) { memcpy(b1, b2, sizeof(BOARD)); }
 
 void move(BOARD board, int is_white, int x, int y) {
-  board[is_white][y] |= (1 << x);
   flip(board, is_white, x, y);
   display(board);
 }
