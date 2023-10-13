@@ -568,7 +568,7 @@ void flip2(ref x8<byte> me, ref x8<byte> him, int x, int y)
 
   // it's expensive to write vertical, so don't do it if nothing changed
   // remember we normalize back to "the square is filled by me" to do
-  // this test.  
+  // this test.
   row |= (ushort)(0x100 << y);
   if (new_row != row) {
     putvert(ref me, ref him, x, new_row);
@@ -659,13 +659,45 @@ void putvert(ref x8<byte> me, ref x8<byte> him, int x, ushort row)
 // get the first diagonal, this is where y goes up when x goes up
 ushort getdiag1(ref x8<byte> me, ref x8<byte> him, int x, int y)
 {
+  // Note I think of the board with the origin in the upper left
+  // like with normal graphics but it really doesn't matter.
+  // The board actually prints the other direction.  But for this
+  // discussion going up means increasing coordinates.
+  //
+  // We are flipping a diagonal like the ones shown in 1 or 2 below
+  // We are given a coordinate on the diagonal that is the point
+  // where we are going to play.  Marked with *.
+  //
+  //    - - - - 2 - - -
+  //    - - - - - 2 - -
+  //    1 - - - - - * -
+  //    - 1 - - - - - 2
+  //    - - 1 - - - - -
+  //    - - - * - - - -
+  //    - - - - 1 - - -
+  //
+  // We want to read exactly the rows we want with exactly the
+  // mask we need to create a virtual row that is the bits
+  // in that diagonal.  Including the "me" and "him" bits.
+
+  // Case 1, we have to move UP and right the diagonal by the 'x' value
+  // to figure out the correct value of the starting y (y0)
+  // of the diagonal.  The ending y (y1) is the last row
+  // the starting x (x0) is 0.
   int x0 = 0;
   int y0 = y - x;
   int y1 = 7;
 
+  // Case 2, when we do the above transform we find ourselves
+  // off the top of the board.  That means we have to shift
+  // right to sort of clip the diagonal.  the -y0 is now
+  // now much we have to shift by.
   if (y0 < 0) {
+    // move right by the overage (-y0)
     x0 = -y0;
+    // stop sooner, we can't get to the bottom now
     y1 = 7 - x0;
+    // start on the first row, best we can do
     y0 = 0;
   }
 
@@ -685,6 +717,8 @@ ushort getdiag1(ref x8<byte> me, ref x8<byte> him, int x, int y)
 // write back the first diagonal, this is where y goes up when x goes up
 void putdiag1(ref x8<byte> me, ref x8<byte> him, int x, int y, int row)
 {
+  // This is exactly the same logic as getdiag1.  We're going to put the
+  // bits back exactly where we got them.
   int x0 = 0;
   int y0 = y - x;
   int y1 = 7;
@@ -708,13 +742,45 @@ void putdiag1(ref x8<byte> me, ref x8<byte> him, int x, int y, int row)
 // get the second diagonal, this is where y goes down when x goes up
 ushort getdiag2(ref x8<byte> me, ref x8<byte> him, int x, int y)
 {
+  // Note I think of the board with the origin in the upper left
+  // like with normal graphics but it really doesn't matter.
+  // The board actually prints the other direction.  But for this
+  // discussion going up means increasing coordinates.
+  //
+  // We are flipping a diagonal like the ones shown in 1 or 2 below
+  // We are given a coordinate on the diagonal that is the point
+  // where we are going to play.  Marked with *.
+  //
+  //    - - - - 1 - - -
+  //    - - - 1 - - - -
+  //    - - * - - - - -
+  //    - 1 - - - - - 2
+  //    1 - - - - - 2 -
+  //    - - - - - * - -
+  //    - - - - 2 - - -
+  //
+  // We want to read exactly the rows we want with exactly the
+  // mask we need to create a virtual row that is the bits
+  // in that diagonal.  Including the "me" and "him" bits.
+
+  // Case 1, we have to DOWN and left on the diagonal by the 'x' value
+  // to figure out the correct value of the starting y (y0)
+  // of the diagonal.  The ending y (y1) is the first row
+  // the starting x (x0) is 0.
   int x0 = 0;
   int y0 = x + y;
   int y1 = 0;
 
+  // Case 2, when we do the above transform we find ourselves
+  // off the bottom of the board.  That means we have to shift
+  // right to sort of clip the diagonal.  the y0 - 7 is now
+  // now much we have to shift by.
   if (y0 > 7) {
+    // move x0 to the right by the overage (y0 - 7)
      x0 = y0 - 7;
+     // move the ending y coordinate up by the same amount
      y1 = x0;
+     // start on the last row
      y0 = 7;
   }
 
@@ -733,14 +799,16 @@ ushort getdiag2(ref x8<byte> me, ref x8<byte> him, int x, int y)
 
 void putdiag2(ref x8<byte> me, ref x8<byte> him, int x, int y, ushort row)
 {
+  // This is exactly the same logic as getdiag2. We're going to put the
+  // bits back exactly where we got them.
   int x0 = 0;
   int y0 = x + y;
   int y1 = 0;
 
   if (y0 > 7) {
-     x0 = y0 - 7;
-     y1 = x0;
-     y0 = 7;
+    x0 = y0 - 7;
+    y1 = x0;
+    y0 = 7;
   }
 
   byte mask = (byte)(1 << x0);
@@ -1167,7 +1235,7 @@ int score(BOARD board, byte is_white)
     // possible enemy score which means we might not play
     // truly perfectly. The wiggle room is that we might
     // be able to force more empty squares with our score
-    // fixed.  This actually comes up in the game in endgame.txt    
+    // fixed.  This actually comes up in the game in endgame.txt
     for (int j = 0; j < 8; j++) {
       s += bit_count[me[j]];
     }

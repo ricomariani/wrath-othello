@@ -118,18 +118,50 @@ static void putvert(uint8_t *me, uint8_t *him, int x, uint16_t row) {
   me[5] ^= mask_out & (me[5] ^ ((row & 1) << x)); row >>= 1;
   me[6] ^= mask_out & (me[6] ^ ((row & 1) << x)); row >>= 1;
   me[7] ^= mask_out & (me[7] ^ ((row & 1) << x));
-  
+
 }
 
 // get the first diagonal, this is where y goes up when x goes up
 static uint16_t getdiag1(uint8_t *me, uint8_t *him, int x, int y) {
+  // Note I think of the board with the origin in the upper left
+  // like with normal graphics but it really doesn't matter.
+  // The board actually prints the other direction.  But for this
+  // discussion going up means increasing coordinates.
+  //
+  // We are flipping a diagonal like the ones shown in 1 or 2 below
+  // We are given a coordinate on the diagonal that is the point
+  // where we are going to play.  Marked with *.
+  //
+  //    - - - - 2 - - -
+  //    - - - - - 2 - -
+  //    1 - - - - - * -
+  //    - 1 - - - - - 2
+  //    - - 1 - - - - -
+  //    - - - * - - - -
+  //    - - - - 1 - - -
+  //
+  // We want to read exactly the rows we want with exactly the
+  // mask we need to create a virtual row that is the bits
+  // in that diagonal.  Including the "me" and "him" bits.
+
+  // Case 1, we have to move UP and right the diagonal by the 'x' value
+  // to figure out the correct value of the starting y (y0)
+  // of the diagonal.  The ending y (y1) is the last row
+  // the starting x (x0) is 0.
   int x0 = 0;
   int y0 = y - x;
   int y1 = 7;
 
+  // Case 2, when we do the above transform we find ourselves
+  // off the top of the board.  That means we have to shift
+  // right to sort of clip the diagonal.  the -y0 is now
+  // now much we have to shift by.
   if (y0 < 0) {
+    // move right by the overage (-y0)
     x0 = -y0;
+    // stop sooner, we can't get to the bottom now
     y1 = 7 - x0;
+    // start on the first row, best we can do
     y0 = 0;
   }
 
@@ -148,6 +180,8 @@ static uint16_t getdiag1(uint8_t *me, uint8_t *him, int x, int y) {
 
 // write back the first diagonal, this is where y goes up when x goes up
 static void putdiag1(uint8_t *me, uint8_t *him, int x, int y, uint16_t row) {
+  // This is exactly the same logic as getdiag1.  We're going to put the
+  // bits back exactly where we got them.
   int x0 = 0;
   int y0 = y - x;
   int y1 = 7;
@@ -170,14 +204,46 @@ static void putdiag1(uint8_t *me, uint8_t *him, int x, int y, uint16_t row) {
 
 // get the second diagonal, this is where y goes down when x goes up
 static uint16_t getdiag2(uint8_t *me, uint8_t *him, int x, int y) {
+  // Note I think of the board with the origin in the upper left
+  // like with normal graphics but it really doesn't matter.
+  // The board actually prints the other direction.  But for this
+  // discussion going up means increasing coordinates.
+  //
+  // We are flipping a diagonal like the ones shown in 1 or 2 below
+  // We are given a coordinate on the diagonal that is the point
+  // where we are going to play.  Marked with *.
+  //
+  //    - - - - 1 - - -
+  //    - - - 1 - - - -
+  //    - - * - - - - -
+  //    - 1 - - - - - 2
+  //    1 - - - - - 2 -
+  //    - - - - - * - -
+  //    - - - - 2 - - -
+  //
+  // We want to read exactly the rows we want with exactly the
+  // mask we need to create a virtual row that is the bits
+  // in that diagonal.  Including the "me" and "him" bits.
+
+  // Case 1, we have to DOWN and left on the diagonal by the 'x' value
+  // to figure out the correct value of the starting y (y0)
+  // of the diagonal.  The ending y (y1) is the first row
+  // the starting x (x0) is 0.
   int x0 = 0;
-  int y0 = x + y;
+  int y0 = y + x;
   int y1 = 0;
 
+  // Case 2, when we do the above transform we find ourselves
+  // off the bottom of the board.  That means we have to shift
+  // right to sort of clip the diagonal.  the y0 - 7 is now
+  // now much we have to shift by.
   if (y0 > 7) {
-     x0 = y0 - 7;
-     y1 = x0;
-     y0 = 7;
+    // move x0 to the right by the overage (y0 - 7)
+    x0 = y0 - 7;
+    // move the ending y coordinate up by the same amount
+    y1 = x0;
+    // start on the last row
+    y0 = 7;
   }
 
   uint8_t mask = 1 << x0;
@@ -195,14 +261,16 @@ static uint16_t getdiag2(uint8_t *me, uint8_t *him, int x, int y) {
 
 // write back the second diagonal, this is where y goes down when x goes up
 static void putdiag2(uint8_t *me, uint8_t *him, int x, int y, uint16_t row) {
+  // This is exactly the same logic as getdiag2. We're going to put the
+  // bits back exactly where we got them.
   int x0 = 0;
   int y0 = x + y;
   int y1 = 0;
 
   if (y0 > 7) {
-     x0 = y0 - 7;
-     y1 = x0;
-     y0 = 7;
+    x0 = y0 - 7;
+    y1 = x0;
+    y0 = 7;
   }
 
   uint8_t mask = 1 << x0;
