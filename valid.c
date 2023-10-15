@@ -24,7 +24,7 @@ int valid(BOARD board, int is_white, int current_depth) {
       if ((initial_used & mask) != 0)
         continue;
 
-      // flip_table[base_3_row_index][i] tells you what the state is of the
+      // flip_table[row][i] tells you what the state is of the
       // row if you were to place a piece at column i.  So this says
       // if the effect of placing a piece at column i is only that the
       // piece at column i appears, then nothing flips, so it's not valid.
