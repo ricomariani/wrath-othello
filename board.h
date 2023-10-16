@@ -53,8 +53,8 @@ void reset_scored_moves(int lvl);
 void insert_scored_move(int x, int y, int score, int lvl);
 int remove_scored_move(int *x, int *y, int lvl);
 
-int valid(BOARD board, int is_white, int stack);
-void flip(BOARD board, int is_white, int x, int y);
+int valid(uint8_t *me, uint8_t *him, int stack);
+void flip(uint8_t *me, uint8_t *him, int x, int y);
 void move(BOARD board, int is_white, int x, int y);
 
 void safe_gets(char *buf, int len);
@@ -77,4 +77,4 @@ void display_score(BOARD board);
 void build_tables(void);
 
 void load(const char *name, BOARD board);
-int score(BOARD board, int is_white);
+int score(uint8_t *me, uint8_t *him);

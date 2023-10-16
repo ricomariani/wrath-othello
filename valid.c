@@ -2,10 +2,7 @@
 
 // the current depth just tell us which stack to put the valid moves on
 // the stacks are all pre-allocated so there is no malloc
-int valid(BOARD board, int is_white, int current_depth) {
-  uint8_t *me = &board[is_white][0];
-  uint8_t *him = &board[!is_white][0];
-
+int valid(uint8_t *me, uint8_t *him, int current_depth) {
   reset_move_stack(current_depth);
   int found_anything = 0;
 

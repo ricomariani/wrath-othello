@@ -14,7 +14,9 @@ again:;
 
   // recompute the valid moves and put them on the stack
   // they go on stack number INITIAL_DEPTH (i.e. the root)
-  valid(board, is_white, INITIAL_DEPTH);
+  uint8_t *me = &board[is_white][0];
+  uint8_t *him = &board[!is_white][0];
+  valid(me, him, INITIAL_DEPTH);
 
   printf("Please enter a move --> ");
   fflush(stdout);

@@ -1,9 +1,7 @@
 #include "board.h"
 
-int score(BOARD board, int is_white) {
+int score(uint8_t *me, uint8_t *him) {
   int i;
-  uint8_t *me = &board[is_white][0];
-  uint8_t *him = &board[!is_white][0];
 
   uint16_t tmp = 0;
   int s = 0;

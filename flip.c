@@ -12,12 +12,8 @@ static void putdiag2(uint8_t *me, uint8_t *him, int x, int y, uint16_t row);
 // This does the actually flipping needed if a piece is placed at x, y
 // We do not validate that it is legal to do so, that has already
 // happened.
-void flip(BOARD board, int is_white, int x, int y) {
+void flip(uint8_t *me, uint8_t *him, int x, int y) {
   uint16_t row, new;
-
-  // normalize black/white to me/him as usual
-  uint8_t *me = &board[is_white][0];
-  uint8_t *him = &board[!is_white][0];
 
   // extract the bits for horizontal flipping and apply the flip table
   // Note that the flip table assumes the target square (x, y) is empty
