@@ -124,8 +124,10 @@ int valid(BOARD board, int is_white, int current_depth) {
     for (int i = y - 1; i >= 0; i--) {
       uint8_t h = him[i];
       uint8_t m = me[i];
-      uint32_t d0 = ((h >> (y - i)) << 16) | ((h << (y - i)) << 8) | h;
-      uint32_t d1 = ((m >> (y - i)) << 16) | ((m << (y - i)) << 8) | m;
+      uint32_t d0 =
+          ((uint8_t)(h >> (y - i)) << 16) | ((uint8_t)(h << (y - i)) << 8) | h;
+      uint32_t d1 =
+          ((uint8_t)(m >> (y - i)) << 16) | ((uint8_t)(m << (y - i)) << 8) | m;
 
       y0 = (~y1 & d0) | (y0 & (y1 | d1));
       y1 |= d1 | ~d0;
