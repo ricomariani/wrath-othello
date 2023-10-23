@@ -101,24 +101,38 @@ static void putvert(uint8_t *me, uint8_t *him, int x, uint16_t row) {
   uint8_t mask_out = 1 << x;
 
   // flip the bits that need flipping
-  him[0] ^= mask_out & (him[0] ^ ((row & 1) << x)); row >>= 1;
-  him[1] ^= mask_out & (him[1] ^ ((row & 1) << x)); row >>= 1;
-  him[2] ^= mask_out & (him[2] ^ ((row & 1) << x)); row >>= 1;
-  him[3] ^= mask_out & (him[3] ^ ((row & 1) << x)); row >>= 1;
-  him[4] ^= mask_out & (him[4] ^ ((row & 1) << x)); row >>= 1;
-  him[5] ^= mask_out & (him[5] ^ ((row & 1) << x)); row >>= 1;
-  him[6] ^= mask_out & (him[6] ^ ((row & 1) << x)); row >>= 1;
-  him[7] ^= mask_out & (him[7] ^ ((row & 1) << x)); row >>= 1;
+  him[0] ^= mask_out & (him[0] ^ ((row & 1) << x));
+  row >>= 1;
+  him[1] ^= mask_out & (him[1] ^ ((row & 1) << x));
+  row >>= 1;
+  him[2] ^= mask_out & (him[2] ^ ((row & 1) << x));
+  row >>= 1;
+  him[3] ^= mask_out & (him[3] ^ ((row & 1) << x));
+  row >>= 1;
+  him[4] ^= mask_out & (him[4] ^ ((row & 1) << x));
+  row >>= 1;
+  him[5] ^= mask_out & (him[5] ^ ((row & 1) << x));
+  row >>= 1;
+  him[6] ^= mask_out & (him[6] ^ ((row & 1) << x));
+  row >>= 1;
+  him[7] ^= mask_out & (him[7] ^ ((row & 1) << x));
+  row >>= 1;
 
-  me[0] ^= mask_out & (me[0] ^ ((row & 1) << x)); row >>= 1;
-  me[1] ^= mask_out & (me[1] ^ ((row & 1) << x)); row >>= 1;
-  me[2] ^= mask_out & (me[2] ^ ((row & 1) << x)); row >>= 1;
-  me[3] ^= mask_out & (me[3] ^ ((row & 1) << x)); row >>= 1;
-  me[4] ^= mask_out & (me[4] ^ ((row & 1) << x)); row >>= 1;
-  me[5] ^= mask_out & (me[5] ^ ((row & 1) << x)); row >>= 1;
-  me[6] ^= mask_out & (me[6] ^ ((row & 1) << x)); row >>= 1;
+  me[0] ^= mask_out & (me[0] ^ ((row & 1) << x));
+  row >>= 1;
+  me[1] ^= mask_out & (me[1] ^ ((row & 1) << x));
+  row >>= 1;
+  me[2] ^= mask_out & (me[2] ^ ((row & 1) << x));
+  row >>= 1;
+  me[3] ^= mask_out & (me[3] ^ ((row & 1) << x));
+  row >>= 1;
+  me[4] ^= mask_out & (me[4] ^ ((row & 1) << x));
+  row >>= 1;
+  me[5] ^= mask_out & (me[5] ^ ((row & 1) << x));
+  row >>= 1;
+  me[6] ^= mask_out & (me[6] ^ ((row & 1) << x));
+  row >>= 1;
   me[7] ^= mask_out & (me[7] ^ ((row & 1) << x));
-
 }
 
 // get the first diagonal, this is where y goes up when x goes up
