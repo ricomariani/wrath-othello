@@ -12,7 +12,7 @@ echo "native benchmark (the control)"
 # echo "wrath sharp on .NET 8.0 using Vector128"
 # dotnet run -c Release -f net8.0 xlt ../endgame.txt
 
-cd ../wrath-sharp-inline-arrays
+cd ./wrath-sharp-inline-arrays
 echo "wrath sharp on .NET 8.0 using inline arrays"
 dotnet run -c Release xlt ../endgame.txt
 cd ../wrath-sharp-std-arrays
