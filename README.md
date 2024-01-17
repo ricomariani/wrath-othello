@@ -22,11 +22,11 @@ As it is I had even re-used names in confusing ways between files.  So I'm fixin
 to keep the basics the same and do clean up only. That's already a lot.  The number warnings in the
 original code is staggering.
 
-There are subdirectories for C# versions, in increasing order of goodness:
+There are subdirectories for C# versions:
 
-* ./wrath-sharp : a version that uses Vector128 for board storage, this turned out to be a horrible idea
 * ./wrath-sharp-std-arrays : a version that uses standard arrays for board storage, highly portable
 * ./wrath-sharp-inline-arrays : a version that uses C# 12 inline arrays for storage, best performance
+* ./wrath-sharp-vec128 : a version that uses Vector128 for board storage, this turned out to be a horrible idea
 
 The branches are:
 
